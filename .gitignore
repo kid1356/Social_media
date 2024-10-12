@@ -1,0 +1,53 @@
+# General
+*.log
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.sqlite3
+.DS_Store
+
+# Virtual Environment
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+env.bak/
+*.env
+
+# Django specific
+*.db
+*.pot
+*.pyc
+*.pyo
+__pycache__/
+db.sqlite3
+media/
+staticfiles/
+local_settings.py
+/secrets.json
+
+# React specific
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+/build
+/dist
+*.env.local
+*.env.development.local
+*.env.test.local
+*.env.production.local
+
+# VS Code
+.vscode/
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+.vscode/*.code-workspace
+
+# JetBrains IDEs
+.idea/
+*.iml
