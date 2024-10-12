@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Room</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        h2 {
+            text-align: center;
+            color: #075E54;
+        }
+
+        #chat-container {
+            width: 100%;
+            max-width: 500px;
+            background-color: #fcfffc;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #messages {
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background-color: #e5ddd5;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .message-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            max-width: 70%;
+        }
+
+        .message-wrapper.left {
+            align-self: flex-start;
+        }
+
+        .message-wrapper.right {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .message-bubble {
+            padding: 12px;
+            border-radius: 10px;
+            max-width: 100%;
+            word-wrap: break-word;
+            font-size: 14px;
+            position: relative;
+        }
+
+        .message-bubble.left {
+            background-color: #fff;
+            border: 1px solid #ddd;
+        }
+
+        .message-bubble.right {
+            background-color: #dcf8c6;
+        }
+
+        .message-author {
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        img,
+        video,
+        audio {
+            max-width: 200px;
+            margin-top: 5px;
+        }
+
+        a {
+            display: block;
+            color: #34B7F1;
+        }
+
+        #input-container {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: #fff;
+            gap: 10px;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 20px;
+            border: 1px solid #ccc;
+            outline: none;
+        }
+
+        #sendButton,
+        #locationButton {
+            background-color: #25D366;
+            border: none;
+            color: white;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            outline: none;
+        }
+
+        #sendButton:hover,
+        #locationButton:hover {
+            background-color: #128C7E;
+        }
+
+        #mediaInput {
+            display: none;
+        }
+
+        label[for="mediaInput"] {
+            cursor: pointer;
+            background-color: #34B7F1;
+            padding: 10px;
+            border-radius: 50%;
+            color: white;
+            font-size: 16px;
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chat-container">
+        <h2>Chat Room</h2>
+        <div id="messages"></div>
+        <div id="input-container">
+            <input type="text" id="messageInput" placeholder="Type a message..." />
+            <label for="mediaInput">&#128247;</label>
+            <input type="file" id="mediaInput" accept="*" />
+            <button id="locationButton">&#128205;</button>
+            <button id="sendButton">&#10148;</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const roomName = "{{ room_name }}"; // Server-side rendered variable
+            const token = getCookie('token'); // Function to get token from cookies
+
+            // Create WebSocket connection.
+            const socket = new WebSocket(`ws://127.0.0.1:8000/ws/chat/${roomName}/?token=${token}`);
+
+            socket.onopen = () => {
+                console.log("Connected to the WebSocket.");
+            };
+
+            socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    console.log("data", data);
+
+    // Ensure the message, user, and other properties are accessed correctly
+    const message = data.message || ''; // Extract message
+    const user = data.user || 'Unknown User';
+    const file = data.file || ''; 
+    const latitude = data.latitude || ''; 
+    const longitude = data.longitude || ''; 
+    const isSender = data.is_sender || false;
+
+    const messageWrapper = document.createElement('div');
+    const messageBubble = document.createElement('div');
+    const messageAuthor = document.createElement('div');
+
+    messageWrapper.classList.add('message-wrapper', isSender ? 'right' : 'left');
+    messageBubble.classList.add('message-bubble', isSender ? 'right' : 'left');
+    messageAuthor.classList.add('message-author');
+
+    messageAuthor.textContent = `${user}:`; // Format author text
+    messageBubble.textContent = message; // Set the message text
+
+    // Check if there is a file to display
+    if (file) {
+        const mediaType = file.split(';')[0].split(':')[1] || ''; // Ensure mediaType is defined
+        const fileData = data.fileData; // Use data.fileData if you have it
+
+        if (mediaType.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.src = fileData; // Assuming the file is base64 encoded data URL
+            messageBubble.appendChild(img);
+        } else if (mediaType.startsWith('audio/')) {
+            const audioPlayer = document.createElement('audio');
+            audioPlayer.src = fileData; // Base64 encoded audio file
+            audioPlayer.controls = true;
+            messageBubble.appendChild(audioPlayer);
+        } else if (mediaType.startsWith('video/')) {
+            const videoPlayer = document.createElement('video');
+            videoPlayer.src = fileData; // Base64 encoded video file
+            videoPlayer.controls = true;
+            videoPlayer.style.maxWidth = '200px'; // Limit video size for display
+            messageBubble.appendChild(videoPlayer);
+        } else {
+            // For other file types, display as a download link
+            const downloadLink = document.createElement('a');
+            downloadLink.href = fileData;
+            downloadLink.textContent = `Download ${file.split('/').pop()}`; // Display filename
+            downloadLink.target = '_blank';
+            messageBubble.appendChild(downloadLink);
+        }
+    }
+
+    // Check if location data is provided
+    if (latitude && longitude) {
+        const locationLink = document.createElement('a');
+        locationLink.href = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        locationLink.target = '_blank';
+        locationLink.textContent = `Location: ${latitude}, ${longitude}`;
+        messageBubble.appendChild(locationLink);
+    }
+
+    messageWrapper.appendChild(messageAuthor);
+    messageWrapper.appendChild(messageBubble);
+    document.getElementById("messages").appendChild(messageWrapper);
+    messageWrapper.scrollIntoView({ behavior: 'smooth', block: 'end' });
+};
+
+
+            socket.onclose = () => {
+                console.log("Disconnected from the WebSocket.");
+            };
+
+            document.getElementById("sendButton").onclick = () => {
+                const messageInput = document.getElementById("messageInput");
+                const message = messageInput.value.trim();
+                sendMessage(message);
+                messageInput.value = '';
+            };
+
+            document.getElementById("locationButton").onclick = () => {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition((position) => {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+
+                        // Send location data to the WebSocket
+                        socket.send(JSON.stringify({
+                            message: 'Shared location',
+                            latitude: latitude,
+                            longitude: longitude
+                        }));
+                    }, (error) => {
+                        console.error('Error fetching location:', error);
+                    });
+                } else {
+                    alert('Geolocation is not supported by this browser.');
+                }
+            };
+
+            function sendMessage(message) {
+                const mediaInput = document.getElementById("mediaInput");
+
+                if (mediaInput.files.length > 0) {
+                    const file = mediaInput.files[0];
+                    const reader = new FileReader();
+
+                    reader.onload = () => {
+                        const fileData = reader.result;
+                        socket.send(JSON.stringify({ message, file: fileData, fileName: file.name }));
+                        mediaInput.value = '';
+                    };
+                    reader.readAsDataURL(file);
+                } else if (message) {
+                    socket.send(JSON.stringify({ message }));
+                }
+            }
+
+            // Helper function to get cookie
+            function getCookie(name) {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+            }
+        });
+    </script>
+</body>
+
+</html>

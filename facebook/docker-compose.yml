@@ -1,0 +1,35 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    command: sh -c "python3 manage.py migrate --noinput && python3 manage.py collectstatic --noinput && python3 manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/facebook
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=facebook.settings
+
+    depends_on:
+      - redis
+      - database
+    
+
+  redis:
+    image: redis:alpine
+    ports:
+      - '6379:6379'
+
+
+  database:
+    build: .
+
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "3307:3306"
+
+

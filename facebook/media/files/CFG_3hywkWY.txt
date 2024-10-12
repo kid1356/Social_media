@@ -1,0 +1,90 @@
+S → expr
+
+expr → expr PLUS term
+expr → expr MINUS term
+expr → term
+
+
+
+term → term MUL factor
+term → term DIV factor
+term → factor
+
+
+
+factor → INT
+factor → FLOAT
+factor → STRING
+factor → BOOLEAN
+factor → IDENTIFIER
+factor → LPAREN expr RPAREN
+
+
+3 + 5 * (10 - 2)
+
+
+
+INT(3), PLUS, INT(5), MUL, LPAREN, INT(10), MINUS, INT(2), RPAREN
+
+
+
+
+S
+|
+expr
+|
+expr PLUS term
+|     |
+term   term MUL factor
+|       |        |
+factor  factor   factor
+|       |        |
+INT(3)  INT(5)   LPAREN expr RPAREN
+                       |
+                       expr MINUS term
+                       |     |
+                       term  term
+                       |     |
+                       factor factor
+                       |     |
+                       INT(10) INT(2)
+
+
+
+
+
+(1+2)/2−4
+
+
+   S
+   |
+  expr
+   |
+expr + term
+  |   |
+term * factor
+ |    |   
+factor  factor
+ |     |   
+INT(3)  INT(5)   
+ |     (expr)
+INT(10) (expr - term)
+          |
+        term
+         |
+        factor
+         |
+        INT(2)
+
+
+
+
+
+
+
+ANIME LANGUAGE 
+token
+Re
+grammmer
+cfg
+

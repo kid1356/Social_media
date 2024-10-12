@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width-device-width,intial-scale=1.0">
+    <title>Dice game</title>
+    <style>
+    body {
+        margin:0;
+    }
+
+    img {
+        display:block;
+
+        margin-top:13%;
+        margin-left:auto;
+        margin-right: auto;
+        width: 15% ;
+        height: 200px ;
+    }
+
+
+    .btn {
+        display: block;
+        border: none;
+        margin-left: auto;
+        margin-right: auto;
+        background-color:blue;
+        color: rgb(241, 255, 240);
+        width: 10% ;
+        padding: 15px 25px ;
+        border-radius: 8px ;
+        text-align: center;
+        font-size: 30px;
+
+    }
+
+
+    </style>
+    <script>
+    function dice() {
+        setTimeout(function () {
+            var num = Math.floor(Math.random() * 6) + 1;
+            document.getElementById("image").setAttribute("src","d"+ num +".png");
+         }, 2000);
+    }
+    </script>
+
+
+</head>
+<body>
+    <img class="img" id="image" src="d6.png">
+
+    <br><br><br>
+
+    <button type="submit" class="btn" onClick="dice()"> Roll </button>
+
+</body>
+</html>
