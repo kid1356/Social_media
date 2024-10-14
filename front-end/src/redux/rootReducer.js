@@ -3,6 +3,7 @@ import { combineReducers } from "redux";
 import storage from "redux-persist/lib/storage";
 import appReducer from './slices/app'
 import chatReducer from './slices/chats'
+import authReducer from './slices/auth'
 
 //slices
 
@@ -18,6 +19,7 @@ const rootPersistConfig = {
 //create combine reducer
 const rootReducer = combineReducers({
     app: appReducer,
+    auth: authReducer,
     chats: chatReducer,
 });
 

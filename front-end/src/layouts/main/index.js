@@ -1,28 +1,30 @@
+import React from "react";
 import { Container, Stack } from "@mui/material";
-import React, { useEffect } from "react";
+import { useSelector } from "react-redux";
 import { Navigate, Outlet } from "react-router-dom";
-import Logo from '../../assets/Images/logo.ico'
-
-const isAuthenticated = false;
+import Logo from "../../assets/Images/logo.ico";
 
 const MainLayout = () => {
-  const auth = JSON.parse(localStorage.getItem('auth'));
+  const { isLogin } = useSelector((state) => state?.auth);
 
-  if (auth?.isLogin) {
-    <Navigate to='/app' />;
+  if (isLogin) {
+    return <Navigate to="/app" />;
   }
 
   return (
     <>
-      <Container sx={{ mt: 5 }} maxWidth='sm'>
+      <Container sx={{ mt: 5 }} maxWidth="sm">
         <Stack spacing={5}>
-          <Stack sx={{ width: '100%' }} direction='column' alignItems={'center'}>
+          <Stack
+            sx={{ width: "100%" }}
+            direction="column"
+            alignItems={"center"}
+          >
             <img style={{ height: 120, width: 120 }} src={Logo} alt="Logo" />
           </Stack>
         </Stack>
         <Outlet />
       </Container>
-
     </>
   );
 };

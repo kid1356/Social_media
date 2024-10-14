@@ -5,27 +5,26 @@ import io from 'socket.io-client';
 import { Chat_History } from '../../data'
 import { DocMsg, LinkMsg, MediaMsg, ReplyMsg, TextMsg, TimeLine } from './MsgTypes';
 import axiosInstance from '../../utils/axiosInstance';
+import messagesJson from '../../json/messages.json';
 
 
-const Message = ({ menu }) => {
-  const { chats } = useSelector((state) => state?.chats);
-  const [messages, setMessages] = useState([]);
+const Message = ({ menu, messages }) => {
+  // const { chats } = useSelector((state) => state?.chats);
+  // const [messages, setMessages] = useState(messagesJson);
 
-  // console.log(chats);
+  // const fetchMessages = async () => {
+  //   try {
+  //     let response = await axiosInstance.get(`/messages/get/${chats?.name}/chats/`)
+  //     setMessages(response?.data?.results)
+  //     setMessages(messages)
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // }
 
-  const fetchMessages = async () => {
-    try {
-      let response = await axiosInstance.get(`/messages/get/${chats?.name}/chats/`)
-      // console.log(response);
-      setMessages(response?.data?.results)
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  useEffect(() => {
-    fetchMessages()
-  }, [chats?.id])
+  // useEffect(() => {
+  //   fetchMessages()
+  // }, [chats?.id])
 
   return (
     <Box p={3}>

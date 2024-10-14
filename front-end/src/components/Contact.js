@@ -133,9 +133,9 @@ const Contact = () => {
             }} endIcon={<CaretRight/>}>401</Button>
           </Stack>
           <Stack direction='row' spacing={2} alignItems={'center'}>
-            {[1,2,3].map((el)=>(
+            {[1,2,3].map((el, index)=>(
               <Box>
-                <img src={faker.image.food()} alt={faker.name.fullName()}/>
+                <img key={index} src={faker.image.food()} alt={faker.name.fullName()}/>
               </Box>
             ))}
           </Stack>

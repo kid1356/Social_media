@@ -1,17 +1,16 @@
+import React from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { Avatar, Box, Typography, IconButton, Divider, Stack, } from '@mui/material'
 import { CaretDown, MagnifyingGlass, Phone, VideoCamera } from 'phosphor-react'
-import React from 'react';
 import { useTheme } from "@mui/material/styles";
 import { faker } from '@faker-js/faker';
 import StyledBadge from '../StyledBadge';
 import { ToggleSidebar } from '../../redux/slices/app';
-import { useDispatch, useSelector } from 'react-redux';
 
 const Header = () => {
     const dispatch = useDispatch();
     const theme = useTheme();
     const { chats } = useSelector((state) => state?.chats)
-    // console.log({ chats });
 
     return (
         <Box p={2} sx={{ width: '100%', backgroundColor: theme.palette.mode === 'light' ? '#F8FAFF' : theme.palette.background.paper, boxShadow: '0px 0px 2px rgba(0,0,0,0.25)' }}>
@@ -22,18 +21,19 @@ const Header = () => {
                 }} direction={'row'} spacing={2}>
                     <Box>
                         <StyledBadge overlap="circular"
-                            anchorOrigin={{ // position
+                            anchorOrigin={{
                                 vertical: "bottom",
                                 horizontal: "right",
                             }}
                             variant="dot">
-                            <Avatar alt={faker.name.fullName()} src={`http://localhost:8000/media/${chats?.participants[0]?.profile_picture}`} />
+                            {/* <Avatar alt={faker.name.fullName()} src={`http://localhost:8000/media/${chats?.participants[0]?.profile_picture}`/> */}
+                            <Avatar alt={faker.name.fullName()} src={faker.image.avatar()} />
                         </StyledBadge>
 
                     </Box>
                     <Stack spacing={0.2}>
                         <Typography variant='subtitle2'>
-                            {chats?.room_type === "group" ? chats?.name : chats?.participants[0]?.first_name}
+                            {chats?.room_type === "group" ? chats?.name : chats?.participants && chats?.participants[0]?.first_name}
                         </Typography>
                         <Typography variant='caption'>
                             Online

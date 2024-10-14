@@ -1,0 +1,43 @@
+[
+  {
+    "id": 2,
+    "name": "group",
+    "room_type": "group",
+    "last_message": "hey this is last message",
+    "participants": [
+      {
+        "id": 1,
+        "first_name": "abdul",
+        "profile_picture": "https://via.placeholder.com/150/d32772"
+      },
+      {
+        "id": 3,
+        "first_name": "adeel",
+        "profile_picture": "https://via.placeholder.com/150/d32771"
+      },
+      {
+        "id": 2,
+        "first_name": "mustafa",
+        "profile_picture": "https://via.placeholder.com/150/d32775"
+      }
+    ]
+  },
+  {
+    "id": 33,
+    "name": "private_1_3",
+    "room_type": "private",
+    "last_message": "hey this is last message",
+    "participants": [
+      {
+        "id": 1,
+        "first_name": "abdul",
+        "profile_picture": "https://via.placeholder.com/150/d32772"
+      },
+      {
+        "id": 2,
+        "first_name": "mustafa",
+        "profile_picture": "https://via.placeholder.com/150/d32775"
+      }
+    ]
+  }
+]

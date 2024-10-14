@@ -54,9 +54,9 @@ const SharedMessages = () => {
                         //Images
                        return <Grid container spacing={2}>
                             {
-                                [0,1,2,3,4,5,6].map((el)=>{
+                                [0,1,2,3,4,5,6].map((el, index)=>{
                                    return <Grid item xs={4}>
-                                        <img src={faker.image.avatar()} alt={faker.name.fullName}/>
+                                        <img key={index} src={faker.image.avatar()} alt={faker.name.fullName}/>
                                     </Grid>
                                 })
                             }
