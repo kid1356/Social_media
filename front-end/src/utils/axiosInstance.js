@@ -1,21 +1,18 @@
-// src/axiosInstance.js
-import axios from 'axios';
+import axios from "axios";
+import store from "../redux/store"; 
 
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8000', // Base URL for all requests
+  baseURL: "http://localhost:8000",
   headers: {
-    'Content-Type': 'application/json',
-    // You can set additional headers like Authorization here if needed
+    "Content-Type": "application/json",
   },
 });
 
-// Optionally add request/response interceptors
 axiosInstance.interceptors.request.use(
   (config) => {
-    // Modify request config if needed (e.g., add authorization token)
-    const auth = JSON.parse(localStorage.getItem('auth'));
+    const { auth } = store?.getState()?.auth;
     if (auth?.token?.access) {
-      config.headers['Authorization'] = `Bearer ${auth?.token?.access}`;
+      config.headers["Authorization"] = `Bearer ${auth?.token?.access}`;
     }
     return config;
   },

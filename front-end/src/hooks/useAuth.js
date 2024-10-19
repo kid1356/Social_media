@@ -35,7 +35,7 @@ function useAuth() {
       setIsLoading(false);
     }
   };
-  
+
   const createAccount = async (data) => {
     try {
       setIsLoading(true);
@@ -49,8 +49,6 @@ function useAuth() {
       setIsLoading(false);
     }
   };
-
-
 
   return {
     login,
