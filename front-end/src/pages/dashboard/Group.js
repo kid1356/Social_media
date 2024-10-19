@@ -1,5 +1,5 @@
 import { Box, Stack, Typography, Link, IconButton, Divider } from '@mui/material'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Search, SearchIconWrapper, StyledInputBase } from '../../components/Search'
 import { MagnifyingGlass, Plus } from 'phosphor-react';
 import { useTheme } from "@mui/material/styles";
@@ -8,10 +8,40 @@ import '../../css/global.css';
 import { ChatList } from '../../data';
 import ChatElement from '../../components/ChatElement';
 import CreateGroup from '../../sections/main/CreateGroup';
+import axiosInstance from '../../utils/axiosInstance';
+import { setNewChat } from '../../redux/slices/chats';
+import getUserAllChatsRoom from '../../json/getUserAllChatsRoom.json';
+import Conversation from '../../components/Conversation';
+import { useSelector } from 'react-redux';
 
 const Group = () => {
     const theme = useTheme();
+    const [chatRoom, setChatRoom] = useState(getUserAllChatsRoom);
     const [openDialog, setOpenDialog] = useState(false);
+  const {sidebar} = useSelector((store)=> store.app);// access our store inside component
+
+
+    const fetchChatRooms = async () => {
+        try {
+        //   const response = await axiosInstance.get('/messages/get-user-all-chat-rooms');
+          // setChatRoom(response?.data?.results)
+          setChatRoom(getUserAllChatsRoom)
+        } catch (error) {
+          console.log(error);
+        }
+      }
+    
+      const handleOnClick = (data) => {
+        setNewChat(data)
+      }
+    
+      useEffect(() => {
+        handleOnClick(chatRoom[0])
+      }, [chatRoom])
+    
+      useEffect(() => {
+        fetchChatRooms()
+      }, [])
 
     const handleCloseDialog = () =>{
         setOpenDialog(false);
@@ -47,24 +77,27 @@ const Group = () => {
                 <Stack spacing={3} className='scrollbar'  sx={{flexGrow:1, overflowY:'scroll', height:'100%'}}>
                     <SimpleBarStyle  timeout={500} clickOnTrack={false}>
                         <Stack spacing={2.5}>
-                            {/*  */}
-                            <Typography variant='subtitle2' sx={{color:'#676667'}}>Pinned</Typography>
+                            {/* <Typography variant='subtitle2' sx={{color:'#676667'}}>Pinned</Typography> */}
                             {/* Pinned */}
-                            {ChatList.filter((el)=> el.pinned).map((el)=>{
+                            {/* {ChatList.filter((el)=> el.pinned).map((el)=>{
                                 return <ChatElement  {...el}/>
-                            })}
-
-                              {/*  */}
+                            })} */}
                               <Typography variant='subtitle2' sx={{color:'#676667'}}>All Groups</Typography>
                             {/* Chat List */}
-                            {ChatList.filter((el)=> !el.pinned).map((el)=>{
-                                return <ChatElement  {...el}/>
+                            {chatRoom.filter((el)=> !el.pinned).map((el, index)=>{
+                                return <ChatElement key={index} {...el} data={el} onClick={handleOnClick} />
                             })}
                         </Stack>
                     </SimpleBarStyle>
                 </Stack>
             </Stack>
         </Box>
+
+        <Box sx={{ height: '100%', width: sidebar.open ? 'calc(100vw - 740px)': 'calc(100vw - 420px)',
+       backgroundColor: theme.palette.mode === 'light' ? '#F0F4FA' : theme.palette.background.default }}>
+      {/* Conversation */}
+      <Conversation/>
+      </Box>
 
         {/* Right */}
 

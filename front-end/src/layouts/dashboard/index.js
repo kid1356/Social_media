@@ -1,24 +1,21 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { Stack } from '@mui/material';
+import { Stack } from "@mui/material";
+import { useSelector } from "react-redux";
 import SideBar from "./SideBar";
-import { useEffect } from "react";
-
-const isAuthenticated = false;
 
 const DashboardLayout = () => {
-  
-  const auth = JSON.parse(localStorage.getItem('auth'));
-  if (!auth.isLogin) {
-    <Navigate to='/auth/login' />;
+  const { isLogin } = useSelector((state) => state?.auth);
+
+  if (!isLogin) {
+    return <Navigate to="/auth/login" />;
   }
 
   return (
-    <Stack direction='row'>
+    <Stack direction="row">
       {/* SideBar */}
       <SideBar />
       <Outlet />
     </Stack>
-
   );
 };
 

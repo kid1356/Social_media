@@ -47,17 +47,17 @@ const Actions = [
     }
 ];
 
-const ChatInput = ({ setOpenPicker, message, hanldeOnChange, handleKeyDown }) => {
+const ChatInput = ({ setOpenPicker, messageValue, hanldeOnChange,  }) => {
     const [openAction, setOpenAction] = useState(false);
 
     return (
-        <StyledInput fullWidth placeholder='Write a message...' onKeyDown={handleKeyDown} value={message} onChange={hanldeOnChange} variant='filled' InputProps={{
+        <StyledInput fullWidth placeholder='Write a message...' value={messageValue} onChange={hanldeOnChange} variant='filled' InputProps={{
             disableUnderline: true,
             startAdornment:
                 <Stack sx={{ width: 'max-content' }}>
                     <Stack sx={{ position: 'relative', display: openAction ? 'inline-block' : 'none' }}>
-                        {Actions.map((el) => (
-                            <Tooltip placement='right' title={el.title}>
+                        {Actions.map((el, index) => (
+                            <Tooltip key={index} placement='right' title={el.title}>
                                 <Fab sx={{ position: 'absolute', top: -el.y, backgroundColor: el.color }}>
                                     {el.icon}
                                 </Fab>
@@ -65,7 +65,7 @@ const ChatInput = ({ setOpenPicker, message, hanldeOnChange, handleKeyDown }) =>
 
                         ))}
                     </Stack>
-                    <InputAdornment>
+                    <InputAdornment  position="start">
                         <IconButton onClick={() => {
                             setOpenAction((prev) => !prev)
                         }}>
@@ -74,7 +74,7 @@ const ChatInput = ({ setOpenPicker, message, hanldeOnChange, handleKeyDown }) =>
                     </InputAdornment>
                 </Stack>
             ,
-            endAdornment: <InputAdornment>
+            endAdornment: <InputAdornment  position="start">
                 <IconButton onClick={() => {
                     setOpenPicker((prev) => !prev);
                 }}>
@@ -85,58 +85,52 @@ const ChatInput = ({ setOpenPicker, message, hanldeOnChange, handleKeyDown }) =>
     )
 }
 
-const Footer = () => {
+const Footer = ({messageValue, hanldeOnChange, handleMessage}) => {
     const theme = useTheme();
     const [openPicker, setOpenPicker] = useState(false);
-    const [message, setMessage] = useState("");
-    const [socket, setSocket] = useState(null);
-    const [messages, setMessages] = useState([]);
-    const { chats } = useSelector((state) => state?.chats);
+    // const [message, setMessage] = useState("");
+    // const [socket, setSocket] = useState(null);
+    // const [messages, setMessages] = useState([]);
+    // const { chats } = useSelector((state) => state?.chats);
 
 
-    const hanldeOnChange = (e) => {
-        setMessage(e.target.value)
-    };
+    // const hanldeOnChange = (e) => {
+    //     setMessage(e.target.value)
+    // };
 
-    const handleKeyDown = (event) => {
-        if (event.key === 'Enter') {
-            handleMessage(message);
-        }
-    };
+    // useEffect(() => {
+    //     const auth = JSON.parse(localStorage.getItem('auth'));
 
-    useEffect(() => {
-        const auth = JSON.parse(localStorage.getItem('auth'));
+    //     const ws = new WebSocket(`ws://127.0.0.1:8000/ws/chat/${chats?.name}/?token=${auth?.token?.access}`);
+    //     setSocket(ws);
 
-        const ws = new WebSocket(`ws://127.0.0.1:8000/ws/chat/${chats?.name}/?token=${auth?.token?.access}`);
-        setSocket(ws);
+    //     ws.onopen = () => {
+    //         console.log('WebSocket connected');
+    //     };
 
-        ws.onopen = () => {
-            console.log('WebSocket connected');
-        };
+    //     ws.onmessage = (event) => {
+    //         const data = JSON.parse(event.data);
+    //         setMessages((prevMessages) => [...prevMessages, data.message]);
+    //         console.log('MESSAGE send');
+    //         console.log({ data });
+    //     };
 
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            setMessages((prevMessages) => [...prevMessages, data.message]);
-            console.log('MESSAGE send');
-            console.log({ data });
-        };
+    //     ws.onclose = () => {
+    //         console.log('WebSocket disconnected');
+    //     };
 
-        ws.onclose = () => {
-            console.log('WebSocket disconnected');
-        };
+    //     return () => {
+    //         ws.close();
+    //     };
+    // }, [chats?.id])
 
-        return () => {
-            ws.close();
-        };
-    }, [chats?.id])
-
-    const handleMessage = (message) => {
-        if (socket) {
-            const messageData = JSON.stringify({ message });
-            socket.send(messageData); // Send message to WebSocket
-            setMessage('');
-        }
-    };
+    // const handleMessage = (message) => {
+    //     if (socket) {
+    //         const messageData = JSON.stringify({ message });
+    //         socket.send(messageData);
+    //         setMessage('');
+    //     }
+    // };
 
 
     return (
@@ -154,15 +148,14 @@ const Footer = () => {
                     <ChatInput
                         setOpenPicker={setOpenPicker}
                         hanldeOnChange={hanldeOnChange}
-                        onKeyDown={handleKeyDown}
-                        message={message} />
+                        messageValue={messageValue} />
                 </Stack>
 
                 <Box sx={{
                     height: 48, width: 48, backgroundColor: theme.palette.primary.main,
                     borderRadius: 1.5
                 }}
-                    onClick={() => handleMessage(message)}>
+                    onClick={() => handleMessage(messageValue)}>
                     <Stack sx={{ height: '100%', width: '100%', alignItems: 'center', justifyContent: 'center' }}>
                         <IconButton>
                             <PaperPlaneTilt color='#fff' />

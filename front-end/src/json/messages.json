@@ -1,0 +1,29 @@
+[
+  {
+    "sender": 1,
+    "sender_name": "haseeb",
+    "receiver": 2,
+    "receiver_name": "adeel",
+    "text": "hey how are you",
+    "time_stamp": "2024-10-10T20:09:52.960167Z",
+    "file": null
+  },
+  {
+    "sender": 2,
+    "sender_name": "adeel",
+    "receiver": 1,
+    "receiver_name": "haseeb",
+    "text": "i am fine",
+    "time_stamp": "2024-10-10T20:09:52.960167Z",
+    "file": null
+  },
+  {
+    "sender": 1,
+    "sender_name": "adeel",
+    "receiver": 2,
+    "receiver_name": "haseeb",
+    "text": "what about today?",
+    "time_stamp": "2024-10-10T20:09:52.960167Z",
+    "file": null
+  }
+]

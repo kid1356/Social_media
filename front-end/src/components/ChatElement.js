@@ -5,10 +5,6 @@ import StyledBadge from './StyledBadge';
 //single chat element
 const ChatElement = ({ data, img, online, onClick }) => {
 
-  console.log(data?.participants[0]?.profile_picture);
-  // const { lastMessage, lastMessageTime, participants } = data
-
-
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
     const hours = date.getHours().toString().padStart(2, '0');
@@ -29,8 +25,9 @@ const ChatElement = ({ data, img, online, onClick }) => {
         <Stack direction='row' spacing={2}>
           {online ? <StyledBadge overlap='circular' anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             variant="dot">
-            <Avatar src={`http://localhost:8000/media/${data?.participants[0]?.profile_picture || img}`} />
-          </StyledBadge> : <Avatar src={`http://localhost:8000/media/${data?.participants[0]?.profile_picture || img}`} />}
+            {/* <Avatar src={`http://localhost:8000/media/${data?.participants[0]?.profile_picture || img}`} /> */}
+            <Avatar src={`${data?.participants[0]?.profile_picture}`} />
+          </StyledBadge> : <Avatar src={img} />}
 
           <Stack spacing={0.3}>
             <Typography variant='subtitle2'>

@@ -9,16 +9,17 @@ import { Search, SearchIconWrapper, StyledInputBase } from '../../components/Sea
 import ChatElement from '../../components/ChatElement';
 import axiosInstance from '../../utils/axiosInstance';
 import { setNewChat } from '../../redux/slices/chats';
+import getUserAllChatsRoom from '../../json/getUserAllChatsRoom.json';
 
 const Chats = () => {
   const theme = useTheme();
   const [chatRoom, setChatRoom] = useState([]);
 
-  const fetchMessages = async () => {
+  const fetchChatRooms = async () => {
     try {
-      const response = await axiosInstance.get('/messages/get-user-all-chat-rooms');
-      // console.log(response?.data?.results);
-      setChatRoom(response?.data?.results)
+      // const response = await axiosInstance.get('/messages/get-user-all-chat-rooms');
+      // setChatRoom(response?.data?.results)
+      setChatRoom(getUserAllChatsRoom)
     } catch (error) {
       console.log(error);
     }
@@ -33,7 +34,7 @@ const Chats = () => {
   }, [chatRoom])
 
   useEffect(() => {
-    fetchMessages()
+    fetchChatRooms()
   }, [])
 
   return (
@@ -87,8 +88,8 @@ const Chats = () => {
             <Typography variant='subtitle2' sx={{ color: "#676767" }}>
               All Chats
             </Typography>
-            {chatRoom.filter((el) => !el.pinned).map((el) => {
-              return <ChatElement {...el} data={el} onClick={handleOnClick} />
+            {chatRoom.filter((el) => !el.pinned).map((el, index) => {
+              return <ChatElement key={index} {...el} data={el} onClick={handleOnClick} />
             })}
 
           </Stack>
