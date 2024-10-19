@@ -50,7 +50,7 @@ class LoginView(APIView):
                 message = f"welcome Admin '{user.first_name}'"
             else:
                 message = f"welcome {user.first_name}"
-            return Response({'token':token,'user':serializer.data, 'msg':message,"first_name":user.first_name}, status=status.HTTP_200_OK)
+            return Response({'token':token,'user':{'id':user.id,'first_name':user.first_name,'email':user.email}}, status=status.HTTP_200_OK)
         return Response('Login credential is Invalid', status=status.HTTP_404_NOT_FOUND)
 
 class UserProfileView(APIView):

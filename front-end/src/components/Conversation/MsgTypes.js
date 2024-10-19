@@ -3,6 +3,8 @@ import { useTheme } from '@mui/material/styles'
 import { DotsThreeVertical, DownloadSimple, Image } from 'phosphor-react';
 import React from 'react';
 import { Message_options } from '../../data'
+import useAuth from '../../hooks/useAuth';
+import { useSelector } from 'react-redux';
 
 const DocMsg = ({ el, menu }) => {
     const theme = useTheme();
@@ -109,15 +111,16 @@ const MediaMsg = ({ el, menu }) => {
 
 const TextMsg = ({ data }) => {
     const theme = useTheme();
+    const { auth } = useSelector(state => state.auth)
     return (
-        <Stack direction='row' justifyContent={data.sender === 1 ? 'end' : 'start'}>
+        <Stack direction='row' justifyContent={data?.sender === auth?.user?.id ? 'end' : 'start'}>
             <Box p={1.5}
                 sx={{
-                    backgroundColor: data.sender === 1 ? theme.palette.primary.main : theme.palette.background.default,
+                    backgroundColor: data?.sender === auth?.user?.id ? theme.palette.primary.main : theme.palette.background.default,
                     borderRadius: 1.5,
                     width: 'max-content',
                 }}>
-                <Typography variant='body2' color={data.sender === 1 ? '#fff' : theme.palette.text}>
+                <Typography variant='body2' color={data?.sender === auth?.user?.id ? '#fff' : theme.palette.text}>
                     {data?.text}
                 </Typography>
             </Box>

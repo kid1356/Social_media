@@ -205,6 +205,7 @@ class User_Follow_View(APIView):
 
         return Response({"message":message},status=status.HTTP_200_OK)
 
+
 class AcceptFollowView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self,request, follow_request_id):
@@ -212,12 +213,12 @@ class AcceptFollowView(APIView):
             follow = Followers.objects.get(id = follow_request_id, followed_user =request.user, status='pending')
             follow.status = 'accepted'
             follow.save()
-
-
             return Response("Follow request accepted",status=status.HTTP_200_OK)
         except Followers.DoesNotExist:
             return Response("request Not found",status=status.HTTP_404_NOT_FOUND)
-        
+
+
+
 class RejectFollowView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self,request,follow_request_id):

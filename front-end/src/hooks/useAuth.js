@@ -12,8 +12,8 @@ function useAuth() {
   const login = async (data) => {
     try {
       setIsLoading(true);
-      //   const response = await axiosInstance.post("/users/login/", data);
-      await dispatch(loginReducer(data));
+      const response = await axiosInstance.post("/users/login/", data);
+      await dispatch(loginReducer(response?.data));
       navigate("/app");
     } catch (error) {
       console.log(error);
@@ -25,8 +25,8 @@ function useAuth() {
   const logout = async () => {
     try {
       setIsLoading(true);
-      //   const response = await axiosInstance.post("/users/login/", data);
-      //   console.log(response);
+      // const response = await axiosInstance.post("/users/login/");
+      // console.log(response);
       await dispatch(logoutReducer());
       navigate("/auth/login");
     } catch (error) {
@@ -39,8 +39,8 @@ function useAuth() {
   const createAccount = async (data) => {
     try {
       setIsLoading(true);
-      //   const response = await axiosInstance.post("/users/login/", data);
-      //   console.log(response);
+      const response = await axiosInstance.post("/users/login/", data);
+      console.log(response);
       await dispatch(loginReducer(data));
       navigate("/app");
     } catch (error) {

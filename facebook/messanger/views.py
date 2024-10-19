@@ -59,7 +59,7 @@ class GetAllRoomChatView(APIView):
         except Room.DoesNotExist:
             return Response("Room does not exist", status= status.HTTP_404_NOT_FOUND)
         
-        messages = Messages.objects.filter(room = rooms).order_by('time_stamp')
+        messages = Messages.objects.filter(room = rooms).order_by('-time_stamp')
       
         if messages.exists():
             paginator = PageNumberPagination()
@@ -71,7 +71,7 @@ class GetAllRoomChatView(APIView):
             return Response(paginator.get_paginated_response(serializer.data).data, status=status.HTTP_200_OK)
         
         else:
-            return Response("No Chat Messages found", status=status.HTTP_404_NOT_FOUND)
+            return Response({'result':[]}, status=status.HTTP_200_OK)
 
 
 

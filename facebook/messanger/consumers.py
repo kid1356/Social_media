@@ -110,13 +110,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
          
         data_to_encrypt = {
-            "sender_id":self.user.id,
-            "sender":self.user.first_name,
+            "sender":self.user.id,
+            "sender_name":self.user.first_name,
             "text": message,
             "file": file_data,
             "file_name": file_name,
             "latitude": latitude,
-            "longitude": longitude
+            "longitude": longitude,
     }
        
         # encrypting the received message
@@ -160,8 +160,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     {
                         "type": "chat_message",
                         "encrypt_message": encrypted_message,
-                        "receiver_id": receiver_user.id,
-                        "receiver": receiver_user.first_name
+                        "receiver": receiver_user.id,
+                        "receiver_name": receiver_user.first_name
                 }
             )
         else:
@@ -204,15 +204,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             print(f'Decryption error in chat_message: {e}')
             return
         
-        receiver = event.get("receiver",None)
-        receiver_id = event.get("receiver_id",None)
+        receiver = event.get("receiver_name",None)
+        receiver_id = event.get("receiver",None)
         if receiver:
                                                                 # Send the decrypted message to the WebSocket client
             await self.send(text_data=json.dumps(                       
                 {
                     "message": decrypted_message,
-                    "receiver_id":receiver_id,
-                    "receiver": receiver
+                    "receiver":receiver_id,
+                    "receiver_name": receiver
                     
                 }
             ))
@@ -231,7 +231,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
         data_to_encrypt = {
             "text": await self.get_message_text(message),  # Get the message text
-            "sender": await self.get_sender_name(message),
+            "sender_name": await self.get_sender_name(message),
             
             "file": await self.get_message_file(message),  # Get the file URL if it exists
             "file_name": message.file.name if message.file else None,  # Get the file name

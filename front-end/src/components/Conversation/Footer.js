@@ -88,50 +88,6 @@ const ChatInput = ({ setOpenPicker, messageValue, hanldeOnChange,  }) => {
 const Footer = ({messageValue, hanldeOnChange, handleMessage}) => {
     const theme = useTheme();
     const [openPicker, setOpenPicker] = useState(false);
-    // const [message, setMessage] = useState("");
-    // const [socket, setSocket] = useState(null);
-    // const [messages, setMessages] = useState([]);
-    // const { chats } = useSelector((state) => state?.chats);
-
-
-    // const hanldeOnChange = (e) => {
-    //     setMessage(e.target.value)
-    // };
-
-    // useEffect(() => {
-    //     const auth = JSON.parse(localStorage.getItem('auth'));
-
-    //     const ws = new WebSocket(`ws://127.0.0.1:8000/ws/chat/${chats?.name}/?token=${auth?.token?.access}`);
-    //     setSocket(ws);
-
-    //     ws.onopen = () => {
-    //         console.log('WebSocket connected');
-    //     };
-
-    //     ws.onmessage = (event) => {
-    //         const data = JSON.parse(event.data);
-    //         setMessages((prevMessages) => [...prevMessages, data.message]);
-    //         console.log('MESSAGE send');
-    //         console.log({ data });
-    //     };
-
-    //     ws.onclose = () => {
-    //         console.log('WebSocket disconnected');
-    //     };
-
-    //     return () => {
-    //         ws.close();
-    //     };
-    // }, [chats?.id])
-
-    // const handleMessage = (message) => {
-    //     if (socket) {
-    //         const messageData = JSON.stringify({ message });
-    //         socket.send(messageData);
-    //         setMessage('');
-    //     }
-    // };
-
 
     return (
         <Box p={2} sx={{

@@ -28,7 +28,7 @@ const Message = ({ menu, messages }) => {
 
   return (
     <Box p={3}>
-      <Stack spacing={3}>
+      <Stack spacing={3}  direction="column-reverse" >
         {messages?.map((i, index) => (
           <TextMsg key={index} data={i} />
         ))}

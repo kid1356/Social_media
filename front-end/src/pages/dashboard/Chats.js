@@ -17,9 +17,9 @@ const Chats = () => {
 
   const fetchChatRooms = async () => {
     try {
-      // const response = await axiosInstance.get('/messages/get-user-all-chat-rooms');
-      // setChatRoom(response?.data?.results)
-      setChatRoom(getUserAllChatsRoom)
+      const response = await axiosInstance.get('/messages/get-user-all-chat-rooms?room_type=private');
+      setChatRoom(response?.data?.results)
+      // setChatRoom(getUserAllChatsRoom)
     } catch (error) {
       console.log(error);
     }
