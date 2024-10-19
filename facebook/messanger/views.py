@@ -29,9 +29,16 @@ class MessageCreateView(APIView):
 class GetRoomInfo(APIView):
     permission_classes = [IsAuthenticated]
     def get(self,request):
+        
         user =request.user
         try:
             rooms = Room.objects.filter(members = user)
+            room_type = request.query_params.get('room_type',None)
+
+            if room_type:
+                rooms = rooms.filter(room_type=room_type)
+        
+ 
             paginator =PageNumberPagination()
             paginator.page_size = 15
             result = paginator.paginate_queryset(rooms,request)
@@ -99,7 +106,7 @@ class DeleteMessageView(APIView):
 class PrivateChatInitView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, user_id, *args, **kwargs):
+    def post(self, request, user_id, *args, **kwargs):
         if not user_id:
             return Response({"error": "User ID is required"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -107,5 +114,41 @@ class PrivateChatInitView(APIView):
         if not other_user:
             return Response({"error": "User does not exist"}, status=status.HTTP_404_NOT_FOUND)
         
-        room_name = generate_private_room_name(request.user.id, other_user.id)
-        return Response({"room_name": room_name})
+        sorted_ids = sorted([request.user.id, other_user.id])
+        room_name = f"private_{sorted_ids[0]}_{sorted_ids[1]}"
+
+        room, created = Room.objects.get_or_create(name = room_name, defaults={'room_type' : 'private'})
+        if created:
+            return Response({"room_created":PrivateRoomSerializer(room).data}, status=status.HTTP_201_CREATED)
+        else:
+          return Response({"room_name": PrivateRoomSerializer(room).data}, status=status.HTTP_200_OK)
+    
+
+class CreateGroupView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        
+        serializer = GroupRoomSerializer(data = request.data, context = {'user':request.user})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"Group is Created":serializer.data}, status=status.HTTP_201_CREATED)
+
+class AddGroupMembersView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self,request, group_id):
+        try:
+            room = Room.objects.get(id= group_id)
+        except Room.DoesNotExist:
+         return Response("No room found", status=status.HTTP_404_NOT_FOUND)
+    
+        if request.user != room.group_admin:
+            return Response("Your are not admin of this group",status=status.HTTP_401_UNAUTHORIZED)
+        
+        if room.room_type != 'group':
+            return Response("members can only added in room type group ", status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = AddMembersSerializer(room,data = request.data, partial = True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"members added":serializer.data}, status=status.HTTP_200_OK)

@@ -32,8 +32,15 @@ class Notification(models.Model):
         return self.message
     
 class Followers(models.Model):
+    STATUS_FIELDS =(
+        ('accepted','ACCEPTED'),
+        ('rejected','REJECTED'),
+        ('pending','PENDING')
+
+    ) 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='following')
     followed_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='followers')
+    status = models.CharField(max_length=20, choices=STATUS_FIELDS, null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:

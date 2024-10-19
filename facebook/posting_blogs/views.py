@@ -5,6 +5,7 @@ from .models import *
 from rest_framework.pagination import PageNumberPagination
 from user.serializers import UserProfileSerializer
 
+
 #custom permissions
 class IsOwnerOfBlog(BasePermission):
     def has_object_permission(self, request, view, obj):
@@ -179,7 +180,7 @@ class Comment_Delete_view(APIView):
             return Response("comment does not found", status=status.HTTP_404_NOT_FOUND)
       
 
-class User_Follow_UnFollow_View(APIView):
+class User_Follow_View(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self,request,id):
@@ -191,19 +192,63 @@ class User_Follow_UnFollow_View(APIView):
             followed_user = User.objects.get(id = id)
         except User.DoesNotExist:
             return Response("User Not found",status=status.HTTP_404_NOT_FOUND)
-        
-        followed = Followers.objects.filter(user = user, followed_user = followed_user)
+ 
+        follow_request = Followers.objects.filter(user = request.user, followed_user = followed_user).first()
+        if follow_request:
+                if follow_request.status == 'accepted':
+                    return Response("you are already following this user", status=status.HTTP_400_BAD_REQUEST)
+                if follow_request.status == 'pending':
+                    return Response("your request is on pending ", status=status.HTTP_400_BAD_REQUEST)
 
-        if followed.exists():
-            followed.delete()
-            message = "Unfollow Successfully"
-        else:
-            Followers.objects.create(user =user, followed_user=followed_user)
-            message = "Follow Successfully"
+        Followers.objects.create(user =user, followed_user=followed_user,status = 'pending')
+        message = "Follow request sent Successfully"
 
         return Response({"message":message},status=status.HTTP_200_OK)
 
+class AcceptFollowView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self,request, follow_request_id):
+        try:
+            follow = Followers.objects.get(id = follow_request_id, followed_user =request.user, status='pending')
+            follow.status = 'accepted'
+            follow.save()
+
+
+            return Response("Follow request accepted",status=status.HTTP_200_OK)
+        except Followers.DoesNotExist:
+            return Response("request Not found",status=status.HTTP_404_NOT_FOUND)
         
+class RejectFollowView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self,request,follow_request_id):
+        try:
+            follow = Followers.objects.get(id = follow_request_id, followed_user =request.user)
+            if follow.status == 'accepted':
+                return Response("You already accept its followed request, unfollow it for rejection", status=status.HTTP_400_BAD_REQUEST)
+            follow.status = 'rejected'
+            follow.save()
+
+            return Response("Follow request rejected",status=status.HTTP_200_OK)
+        except Followers.DoesNotExist:
+            return Response("request Not found",status=status.HTTP_404_NOT_FOUND)
+
+            
+class UnfollowView(APIView):
+    permission_classes = [IsAuthenticated]
+    def delete(self, request, id):
+        try:
+            user =  User.objects.get(id=id)
+
+            follow = Followers.objects.filter(user = request.user, followed_user=user, status = 'accepted')
+            if follow.exists():
+               follow.delete()
+               return Response(f"unFollowed {user.first_name}",status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "You are not following this user or the follow request is not accepted."}, status=status.HTTP_400_BAD_REQUEST)
+
+        except User.DoesNotExist:
+            return Response("User Not found",status=status.HTTP_404_NOT_FOUND)
+
 
 class GetFollowersView(APIView):
     def get(self,request):
@@ -216,7 +261,7 @@ class GetFollowersView(APIView):
         result = paginator.paginate_queryset(followed_users, request)
 
         serializer = UserProfileSerializer(result, many =True)
-        # return paginator.get_paginated_response(follower.count(), serializer.data )___
+
         return Response(paginator.get_paginated_response(serializer.data).data,status=status.HTTP_200_OK)
 
        

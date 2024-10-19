@@ -22,10 +22,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     async def connect(self):
         self.room_name = self.scope['url_route']['kwargs'].get('room_name')    #getting room from url
-        # self.encoded_room_name = self.scope['url_route']['kwargs'].get('encoded_room_name')
-        
-        # if self.encoded_room_name:
-        #     self.room_name = decode_private_room_name(self.encoded_room_name)
        
         self.room_group_name = self.get_room_group_name(self.room_name)    #quering if room is private or group
         self.user = self.scope["user"]
@@ -50,17 +46,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.close()             #if user allowed in private room
             return  "You are not allowed in this room"
         
-        room_exist = await self.room_exists(self.room_name)
 
+        if not await self.room_exists(self.room_name):
+            
+            await self.close()
+            print("room does not exist")
         
-        print("room_exists______ on connect", room_exist)
-
-        if not room_exist:
-            print("room_created______ on connect", room_exist)
-
-            await self.create_room(self.room_name)
-        else:
-            await self.join_existing_room(self.room_name)
+        await self.join_existing_room(self.room_name)
         await self.channel_layer.group_add(self.room_group_name, self.channel_name ) #adding group 
            
         print(f"User {self.user} connected to room {self.room_name}")
@@ -118,6 +110,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
          
         data_to_encrypt = {
+            "sender_id":self.user.id,
             "sender":self.user.first_name,
             "text": message,
             "file": file_data,
@@ -167,6 +160,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     {
                         "type": "chat_message",
                         "encrypt_message": encrypted_message,
+                        "receiver_id": receiver_user.id,
                         "receiver": receiver_user.first_name
                 }
             )
@@ -211,11 +205,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
         
         receiver = event.get("receiver",None)
+        receiver_id = event.get("receiver_id",None)
         if receiver:
                                                                 # Send the decrypted message to the WebSocket client
             await self.send(text_data=json.dumps(                       
                 {
                     "message": decrypted_message,
+                    "receiver_id":receiver_id,
                     "receiver": receiver
                     
                 }
@@ -360,17 +356,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
         return message
 
-    @database_sync_to_async
-    def create_room(self,room_name):
-        if room_name.startswith('private_'):
-            room_type = 'private'
-        else:                                        #creating room
-            room_type = 'group'
-        
-        room = Room.objects.create(name=room_name, room_type=room_type)
-        self.add_user_in_room(room_name,room,room_type)
-
-        return room
 
     @database_sync_to_async
     def add_user_in_room(self,room_name,room,room_type):
@@ -395,7 +380,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         room = Room.objects.get(name = room_name)
         room.members.add(self.user)
         room.save()
-        return room    
+        return room
     
     
     @database_sync_to_async
@@ -430,13 +415,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_sender_name(self, message):      # getting the sender name
-        return message.sender.first_name  
+        return message.sender.first_name, message.sender.id
 
        
     @database_sync_to_async
     def get_receiver_name(self, message):      # getting the receiver name
         if message.receiver:
-            return  message.receiver.first_name 
+            return  message.receiver.first_name , message.receiver.id
         else:
             return None
    

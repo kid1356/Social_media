@@ -12,6 +12,7 @@ class Room(models.Model):
     name = models.CharField(max_length=200, unique=True)
     members = models.ManyToManyField(User, related_name='rooms')  # Users in the room
     room_type = models.CharField(max_length=200, choices=ROOM_TYPE, default='group')
+    group_admin = models.ForeignKey(User,on_delete=models.CASCADE, null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):

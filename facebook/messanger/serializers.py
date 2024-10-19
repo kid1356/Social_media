@@ -17,6 +17,12 @@ class MessageSerializer(serializers.ModelSerializer):
         receiver = obj.receiver
         return receiver.first_name if receiver else None
     
+class PrivateRoomSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Room
+        fields = ['id', 'name','room_type']
+
+
 
 class RoomSerializer(serializers.ModelSerializer):
     participants = serializers.SerializerMethodField()
@@ -48,3 +54,43 @@ class RoomSerializer(serializers.ModelSerializer):
             is_read = False
         ).count()
         return unread
+    
+class GroupRoomSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Room
+        fields = ['id','name','members']
+        read_only_fields = ['id','group_admin','created_at','room_type']
+        extra_kwargs = {
+            'name':{'required':True},
+            'members':{'required':True}
+        }
+
+    def create(self, validate_data):
+        group_admin = self.context.get('user')
+        members = validate_data.pop('members',[])
+
+        room = Room.objects.create(
+                name =validate_data['name'],
+                group_admin =group_admin,
+                room_type = 'group'
+            )
+            
+        room.members.add(group_admin)
+        room.members.add(*members)
+        return room
+    
+
+class AddMembersSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Room
+        fields =['members']
+    
+    def update(self, instance, validated_data):
+        
+        new_members = validated_data.get('members',[])
+
+        instance.members.add(*new_members)
+        instance.save()
+
+        return instance
+

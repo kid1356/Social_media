@@ -46,11 +46,11 @@ def like_post(sender, instance, action, reverse,pk_set,**kwargs):
 
 
 @receiver(post_save, sender =Followers)
-def follower(sender, created,instance, **kwargs):
-    if created:
+def follow_request(sender, created,instance, **kwargs):
+    if created and instance.status == 'pending':
         follower = instance.user
         user = instance.followed_user
-        message = f"{follower.first_name} is following You"
+        message = f"{follower.first_name} sent following request"
 
         notification = Notification.objects.create(user=user, message =message)
        
@@ -62,6 +62,27 @@ def follower(sender, created,instance, **kwargs):
                 'notification' : notification.message
             }
         )
+
+@receiver(post_save, sender= Followers)
+def accept_follow_request(sender, created, instance, **kwargs):
+    if not created and instance.status == 'accepted':
+        follower = instance.user
+        followed_user = instance.followed_user 
+
+        message = f'{followed_user.first_name} has accepted your follow request'
+
+        notification = Notification.objects.create(user = follower, message=message)
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send(
+            f'notifications_{follower.id}',
+            {
+                'type':'send_notification',
+                'notification': notification.message
+
+            }
+        ))
+
+
 
 @receiver(post_save, sender = Blogs)
 def blog_post(sender, created, instance, **kwargs):
