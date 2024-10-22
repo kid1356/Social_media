@@ -128,25 +128,30 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
         
         if self.room_name.startswith("private_"):
-            parts = self.room_name.split('_')
-            if len(parts) == 3:  # private_<user1_id>_<user2_id>
-                _, user1_id, user2_id = parts
-                if str(self.user.id) == user1_id:
-                    receiver_id = user2_id
+            # parts = self.room_name.split('_')
+            # if len(parts) == 3:  # private_<user1_id>_<user2_id>
+            #     _, user1_id, user2_id = parts
+            #     if str(self.user.id) == user1_id:
+            #         receiver_id = user2_id
                     
-                else:
-                    receiver_id = user1_id
+            #     else:
+            #         receiver_id = user1_id
                     
-                print('receiver_id_____________',receiver_id) 
+            #     print('receiver_id_____________',receiver_id) 
         
-            receiver_user=await self.get_user_by_id(receiver_id)
-            print("...............",receiver_user, self.room_name)
+            
+            # print("...............",receiver_user, self.room_name)
+            room = await self.get_room(self.room_name)
+            members  = await self.get_room_members_name(room, self.user)
+            for member in members:
+                receiver_user_id = member['id']
+                receiver_user_name = member['first_name']
 
-
+            receiver_user=await self.get_user_by_id(receiver_user_id)
             save_message = await self.save_message(self.user, message,file_data,file_name,latitude,longitude)
 
 
-            if self.user_isOnline(receiver_user.id) and self.room_name in room_users and receiver_user.id in room_users[self.room_name]:
+            if self.user_isOnline(receiver_user_id) and self.room_name in room_users and receiver_user_id in room_users[self.room_name]:
                 
                 await self.mark_message_as_read(receiver_user, save_message)
             else:
@@ -160,8 +165,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     {
                         "type": "chat_message",
                         "encrypt_message": encrypted_message,
-                        "receiver": receiver_user.id,
-                        "receiver_name": receiver_user.first_name
+                        "receiver": receiver_user_id,
+                        "receiver_name": receiver_user_name
                 }
             )
         else:
@@ -171,7 +176,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             room_members = await self.get_room_members(room)
             print("room_memers", room_members)
-            
+
+            room_receivers  = await self.get_room_members_name(room,self.user)
+
             for member in room_members:
                 await self.create_read_status(member, save_message)
 
@@ -187,6 +194,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         {
                             "type": "chat_message",
                             "encrypt_message": encrypted_message,
+                            "members": room_receivers
                             
                     }
                 )
@@ -197,6 +205,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
 
         encrypted_message = event["encrypt_message"]
+        
         
         try:
             decrypted_message = self.decrypt_message(encrypted_message)
@@ -217,9 +226,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 }
             ))
         else:
+            members = event['members']
             await self.send(text_data=json.dumps(
                 {
                     "message": decrypted_message,
+                    "members":members
                    
                     
                 }
@@ -231,6 +242,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
         data_to_encrypt = {
             "text": await self.get_message_text(message),  # Get the message text
+            "sender_id": await self.get_sender_id(message),
             "sender_name": await self.get_sender_name(message),
             
             "file": await self.get_message_file(message),  # Get the file URL if it exists
@@ -245,10 +257,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
         decrypted_message = self.decrypt_message(encrypted_message)
  
         receiver = await self.get_receiver_name(message)
+        receiver_id = await self.get_receiver_id(message)
         if receiver:
            await self.send(text_data=json.dumps(                       
                 {
                     "message": decrypted_message,
+                    'receiver_id':receiver_id,
                     "receiver": receiver
                     
                 }
@@ -390,6 +404,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_room_members(self,room):
         return list(room.members.all())
+    
+    @database_sync_to_async
+    def get_room_members_name(self,room, sender):
+        room_members = list(room.members.exclude(id = sender.id))
+        return [{
+            'id':user.id,
+            'first_name':user.first_name
+        } for user in room_members]
 
     @database_sync_to_async
     def get_unread_messages(self, user_id, room_id):   
@@ -414,18 +436,26 @@ class ChatConsumer(AsyncWebsocketConsumer):
         MessageReadStatus.objects.get_or_create(user=user, message=message, defaults={'is_read': False})
 
     @database_sync_to_async
-    def get_sender_name(self, message):      # getting the sender name
-        return message.sender.first_name, message.sender.id
-
+    def get_sender_name(self, message):     
+        return message.sender.first_name
+    
+    @database_sync_to_async
+    def get_sender_id(self, message):      
+        return message.sender.id
        
     @database_sync_to_async
-    def get_receiver_name(self, message):      # getting the receiver name
+    def get_receiver_name(self, message):    
         if message.receiver:
-            return  message.receiver.first_name , message.receiver.id
+            return message.receiver.first_name
         else:
             return None
    
-
+    @database_sync_to_async
+    def get_receiver_id(self, message):    
+        if message.receiver:
+            return  message.receiver.id
+        else:
+            return None
 
     @database_sync_to_async
     def get_message_text(self, message):    # getting the sender message
