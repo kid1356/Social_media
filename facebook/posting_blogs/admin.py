@@ -34,3 +34,14 @@ class notify(admin.ModelAdmin):
 @admin.register(Followers)
 class followers(admin.ModelAdmin):
     list_display = ['id','user','followed_user','created_at']
+
+
+@admin.register(Story)
+class story(admin.ModelAdmin):
+    list_display = ['id','user','media','caption','visibilty','viewers_count','expire_at','created_at']
+
+
+    def viewers_count(self, obj):
+        return obj.viewers.count()
+    
+    viewers_count.short_description = 'Viewers Count'

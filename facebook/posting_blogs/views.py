@@ -281,3 +281,49 @@ class FollowingView(APIView):
 
         return Response(paginator.get_paginated_response(serializer.data).data,status=status.HTTP_200_OK)
 
+
+
+class CreateStory(APIView):
+    def post(self, request):
+        
+        user =request.user
+        request.data['expire_at'] = timezone.now() + timezone.timedelta(hours=24)
+        serializer =  StorySerializer(data = request.data)
+        
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user= user)
+
+        return Response({'Story created ':serializer.data},status=status.HTTP_201_CREATED)
+    
+class GetStory(APIView):
+    def get(self, request):
+        user =request.user
+
+        story = Story.objects.filter(expire_at__gt = timezone.now(), is_expired =False).exclude(viewers = user)
+
+        serializer = StorySerializer(story, many = True)
+
+        return Response({'Stories':serializer.data}, status=status.HTTP_200_OK)
+    
+
+class TrackViewers(APIView):
+    def post(self, request, story_id):
+        try:
+            story = Story.objects.get(id =story_id, expire_at__gt=timezone.now())
+            if not story.viewers.filter(id= request.user.id).exists():    
+                story.viewers.add(request.user)
+                story.save()
+                return Response({"Message":"Views Is Tracked"}, status=status.HTTP_200_OK)
+
+        except Story.DoesNotExist:
+            return Response("Story not found or expired",status=status.HTTP_404_NOT_FOUND)
+        
+class DeleteStory(APIView):
+    def delete(self, request, story_id):
+        try:
+            story = Story.objects.get(id=story_id, user = request.user)
+            serializer =StorySerializer(story)
+            story.delete()
+            return Response({"message":"Story is deleted","story":serializer.data}, status=status.HTTP_200_OK)
+        except Story.DoesNotExist:
+            return Response("Story not found",status=status.HTTP_404_NOT_FOUND)

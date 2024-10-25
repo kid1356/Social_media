@@ -1,5 +1,6 @@
 from django.db import models
 from user.models import User
+from django.utils import timezone
 # Create your models here.
 
 class Comment(models.Model):
@@ -48,6 +49,19 @@ class Followers(models.Model):
 
 
 
+class Story(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    media = models.FileField(upload_to='stories/', null=True, blank=True)
+    caption = models.TextField(blank=True)
+    visibilty = models.CharField(max_length=15, choices=[("public","Public"),("followers","Followers"),("custom","Custom")], default="followers")
+    created_at = models.DateTimeField(default=timezone.now)
+    expire_at = models.DateTimeField()
+    viewers = models.ManyToManyField(User, related_name='story_views', blank=True)
+    is_expired = models.BooleanField(default=False)
 
 
+    def check_expired(self):
+        if timezone.now() > self.expire_at:
+            self.is_expired = True
+            self.save()
 

@@ -88,7 +88,21 @@ ASGI_APPLICATION = 'facebook.asgi.application'
 WSGI_APPLICATION = 'facebook.wsgi.application'
 
 
+#celery 
+from celery.schedules import crontab
 
+CELERY_BROKER_URL = 'redis://localhost:6379/0' 
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BEAT_SCHEDULE = {
+    'mark-stories-as-expired-every-hour': {
+        'task': 'posting_blogs.tasks.mark_story_expired',
+        'schedule': crontab(minute=0, hour='*'),  
+    },
+    'delete-expired-stories-every-day': {
+        'task': 'posting_blogs.tasks.delete_expired_stories',
+        'schedule': crontab(minute=0, hour=0),  
+    },
+}
 
 
 # Database

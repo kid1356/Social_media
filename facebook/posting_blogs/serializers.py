@@ -57,3 +57,13 @@ class FollowSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'user':{'read_only':True}
         }
+
+
+class StorySerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField()
+    class Meta:
+        model= Story
+        fields = ['user','media','caption','visibilty','expire_at','created_at']
+
+    def get_user(self,obj):
+        return obj.user.first_name

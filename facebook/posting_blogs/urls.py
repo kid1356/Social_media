@@ -17,8 +17,10 @@ urlpatterns = [
     path('accept-follow-request/<int:follow_request_id>/',AcceptFollowView.as_view(),name =' acceptfollowView'),
     path('reject-follow-request/<int:follow_request_id>/',RejectFollowView.as_view(),name =' rejectfollowView'),
     path('unfollow/<int:id>/',UnfollowView.as_view(),name =' unfollowView'),
-    
     path('get-follower/',GetFollowersView.as_view(),name =' getfollowerView'),
-    path("following/",FollowingView.as_view(),name='following')
-
+    path("following/",FollowingView.as_view(),name='following'),
+    path("story/",CreateStory.as_view(),name='createstory'),
+    path("get-stories/view/",GetStory.as_view(),name='getstory'),
+    path('stories/<int:story_id>/views/',TrackViewers.as_view(), name='viewers'),
+    path("stories/<int:story_id>/delete/",DeleteStory.as_view(),name='deletestories'),
 ]   
