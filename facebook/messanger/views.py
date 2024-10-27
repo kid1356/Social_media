@@ -1,15 +1,13 @@
 from django.shortcuts import render
 from .serializers import *
 from rest_framework.permissions import IsAuthenticated,IsAdminUser
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from .utils import generate_private_room_name
 from user.models import User
 from rest_framework.pagination import PageNumberPagination
-from django.db.models import Max
+
 
 # Create your views here.
 

@@ -1,5 +1,6 @@
 from .models import *
 from rest_framework import serializers
+from user.serializers import UserProfileSerializer
 
 class MessageSerializer(serializers.ModelSerializer):
     sender_name = serializers.SerializerMethodField()
@@ -56,6 +57,7 @@ class RoomSerializer(serializers.ModelSerializer):
         return unread
     
 class GroupRoomSerializer(serializers.ModelSerializer):
+    members = UserProfileSerializer(many = True, read_only  = True)
     class Meta:
         model = Room
         fields = ['id','name','members']

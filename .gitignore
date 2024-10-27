@@ -27,6 +27,7 @@ media/
 staticfiles/
 local_settings.py
 /secrets.json
+.env
 
 # React specific
 node_modules/

@@ -1,13 +1,13 @@
-version: '3.9'
 
 services:
+
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile.python
+      context: ./facebook
+      dockerfile: Dockerfile
     command: sh -c "python3 manage.py migrate --noinput && python3 manage.py collectstatic --noinput && python3 manage.py runserver 0.0.0.0:8000"
     volumes:
-      - .:/facebook
+      - ./facebook:/facebook
     ports:
       - "8000:8000"
     environment:
@@ -17,19 +17,35 @@ services:
       - redis
       - database
     
+    
+  front-end:
+    build:
+      context: ./front-end
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./front-end:/front-end
+    depends_on:
+      - backend
 
   redis:
     image: redis:alpine
     ports:
       - '6379:6379'
 
+  
 
   database:
-    build: .
-
+    image: mariadb:latest
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
     ports:
       - "3307:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+
+volumes:
+  db-data:
 
 

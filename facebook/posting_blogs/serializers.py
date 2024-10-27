@@ -61,9 +61,13 @@ class FollowSerializer(serializers.ModelSerializer):
 
 class StorySerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
+    viewers = serializers.SerializerMethodField()
     class Meta:
         model= Story
-        fields = ['user','media','caption','visibilty','expire_at','created_at']
+        fields = ['user','media','caption','visibilty','viewers','expire_at','created_at']
 
     def get_user(self,obj):
         return obj.user.first_name
+    
+    def get_viewers(self, obj):
+        return UserProfileSerializer(obj.viewers.all(), many = True).data
