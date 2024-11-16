@@ -92,7 +92,7 @@ class ForgetPasswordEmailView(APIView):
         return Response("An email is sent Please Check Your Mail Box",status=status.HTTP_200_OK)
 
 class OTPConfirmationView(APIView):
-    permission_classes = [IsAuthenticated]
+
 
     def post(self,request):
         serializer = OTPVerifySerializer(data = request.data)
@@ -102,7 +102,7 @@ class OTPConfirmationView(APIView):
 
 
 class ForgetPasswordView(APIView):
-    permission_classes = [IsAuthenticated]
+    
     def post(self, request):
         serializer = ForgetPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

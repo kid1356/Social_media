@@ -4,32 +4,24 @@ from pyotp import random_base32
 # Create your models here.
 
 class UserManager(BaseUserManager):
-    def create_user(self,email, username=None, first_name=None,gender=None, password=None,confirm_password=None):
+    def create_user(self,email,password=None,**extra_fields):
 
         if not email:
             raise ValueError("User must have an Email")
         
         user = self.model(
-            email = self.normalize_email(email),
-            username = username,
-            first_name = first_name,
-            gender =gender 
-            
-           
-            
-           
-        )
+            email = self.normalize_email(email), **extra_fields )
 
         user.set_password(password)
         user.save(using= self._db)
         return user
 
-    def create_superuser(self, username, email,password=None):
+    def create_superuser(self, email,password=None, **extra_fields):
 
         user = self.create_user(
             email = email,
-            username = username,
-            password = password
+            password = password,
+            **extra_fields
         )
 
         user.is_admin = True

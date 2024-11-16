@@ -57,14 +57,13 @@ class RoomSerializer(serializers.ModelSerializer):
         return unread
     
 class GroupRoomSerializer(serializers.ModelSerializer):
-    members = UserProfileSerializer(many = True, read_only  = True)
+    members = serializers.PrimaryKeyRelatedField(many = True, queryset = User.objects.all(), required = True)
     class Meta:
         model = Room
         fields = ['id','name','members']
         read_only_fields = ['id','group_admin','created_at','room_type']
         extra_kwargs = {
             'name':{'required':True},
-            'members':{'required':True}
         }
 
     def create(self, validate_data):

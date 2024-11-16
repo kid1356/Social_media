@@ -18,4 +18,4 @@ RUN npm run build
 EXPOSE 3000
 
 # Serve the built application
-CMD ["npx", "serve", "-s", "build"]
+CMD ["npm","start"]

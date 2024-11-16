@@ -37,6 +37,8 @@ class RegisterSerilizer(serializers.ModelSerializer):
     def validate(self, attrs):
         password = attrs.get('password')
         confirm_password = attrs.get('confirm_password')
+        attrs['is_admin'] = False
+        attrs['is_active'] = True
 
         if password != confirm_password:
 
@@ -45,6 +47,7 @@ class RegisterSerilizer(serializers.ModelSerializer):
         return attrs
      
     def create(self, validated_data):
+        validated_data.pop('confirm_password')
         return User.objects.create_user(**validated_data)
     
 

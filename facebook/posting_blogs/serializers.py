@@ -3,16 +3,20 @@ from .models import *
 
 class CommentSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
+    user_image = serializers.SerializerMethodField()
     blog_info = serializers.SerializerMethodField()
     class Meta:
         model = Comment
-        fields = ['user','text','blog_info']
+        fields = ['user','user_image','text','blog_info']
         extra_kwargs = {
             'text':{'required':True}
         }
 
     def get_user(self,obj):
         return obj.user.first_name
+    def get_user_image(self,obj):
+        return obj.user.profile_picture.url
+    
     
     def get_blog_info(self,obj):
         blog = obj.blog
@@ -29,18 +33,22 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class BlogSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
+    user_image = serializers.SerializerMethodField()
     total_likes = serializers.SerializerMethodField()
     likers = serializers.SerializerMethodField()
 
     class Meta:
         model = Blogs
-        fields = ['user','text','images','file','total_likes','likers']
+        fields = ['user','user_image','text','images','file','total_likes','likers']
         extra_kwargs = {
             'text':{'required':True}
         }
         
     def get_user(self,obj):
         return obj.user.first_name
+
+    def get_user_image(self,obj):
+        return obj.user.profile_picture.url
 
     def get_total_likes(self,obj):
         return obj.likes.count()
