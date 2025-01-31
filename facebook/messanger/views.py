@@ -117,9 +117,13 @@ class PrivateChatInitView(APIView):
 
         room, created = Room.objects.get_or_create(name = room_name, defaults={'room_type' : 'private'})
         if created:
+            room.members.add(request.user, other_user)
+            room.save()
             return Response({"room_created":PrivateRoomSerializer(room).data}, status=status.HTTP_201_CREATED)
         else:
-          return Response({"room_name": PrivateRoomSerializer(room).data}, status=status.HTTP_200_OK)
+            room.members.add(request.user, other_user)
+            room.save()
+            return Response({"room_name": PrivateRoomSerializer(room).data}, status=status.HTTP_200_OK)
     
 
 class CreateGroupView(APIView):

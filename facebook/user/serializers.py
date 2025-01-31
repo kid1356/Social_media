@@ -1,12 +1,10 @@
 from .models import *
 from rest_framework import serializers
-from rest_framework.response import Response
-from pyotp import TOTP
 from facebook.settings import *
 from django.core.mail import EmailMessage
-from django.contrib.auth import password_validation
 from django.utils.crypto import get_random_string
 from django.utils import timezone
+from messanger.utils import generate_key_pair
 
 class Util:
     @staticmethod
@@ -48,7 +46,17 @@ class RegisterSerilizer(serializers.ModelSerializer):
      
     def create(self, validated_data):
         validated_data.pop('confirm_password')
-        return User.objects.create_user(**validated_data)
+
+        private_key, public_key= generate_key_pair()
+
+        user =  User.objects.create_user(**validated_data)
+
+        user.private_key = private_key
+        user.public_key = public_key
+        user.save()
+
+        return user
+    
     
 
 
