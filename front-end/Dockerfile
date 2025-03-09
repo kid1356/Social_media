@@ -1,12 +1,14 @@
-# Use Node.js image
-FROM node:20.18.0
+# Stage 1: Build the React app
+FROM node:20.18.0 AS build
 
 # Set working directory
 WORKDIR /front-end
 
-# Copy package.json and install dependencies
-COPY package.json .
-RUN npm install
+# Copy package.json and package-lock.json
+COPY package.json package-lock.json ./
+
+# Install dependencies
+RUN npm install --production
 
 # Copy the rest of the application code
 COPY . .
@@ -14,8 +16,20 @@ COPY . .
 # Build the React app for production
 RUN npm run build
 
+# Stage 2: Serve the built application
+FROM node:20.18.0
+
+# Install a lightweight static file server
+RUN npm install -g serve
+
+# Set working directory
+WORKDIR /front-end
+
+# Copy the build artifacts from the previous stage
+COPY --from=build /front-end/build ./build
+
 # Expose port 3000
 EXPOSE 3000
 
 # Serve the built application
-CMD ["npm","start"]
+CMD ["serve", "-s", "build", "-l", "3000"]

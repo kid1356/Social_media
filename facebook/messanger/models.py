@@ -38,7 +38,7 @@ class Messages(models.Model):
 
 
     def __str__(self):
-        return f'{self.sender} in {self.room}: {self.text[:20]}...'
+        return f'{self.sender} in {self.room}: { self.text[:20]if self.text else None}...'
 
 
 class MessageReadStatus(models.Model):

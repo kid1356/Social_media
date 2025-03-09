@@ -41,7 +41,7 @@ class User(AbstractBaseUser):
     gender = models.CharField(max_length= 100 ,choices = CHOICE_FIELDS)
     first_name = models.CharField(max_length = 150, null=True, blank = True)
     last_name = models.CharField(max_length = 150, null = True, blank = True)
-    profile_picture = models.ImageField(upload_to='images/', blank=True , null=True)
+    profile_picture = models.ImageField(upload_to='images/',default='default.jpeg', blank=True , null=True)
     date_of_birth  = models.DateField(blank = True, null = True)
     city = models.CharField(max_length=255, blank = True, null=True)
     country = models.CharField(max_length=255, blank=True, null=True)

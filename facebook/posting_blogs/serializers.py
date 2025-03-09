@@ -15,7 +15,8 @@ class CommentSerializer(serializers.ModelSerializer):
     def get_user(self,obj):
         return obj.user.first_name
     def get_user_image(self,obj):
-        return obj.user.profile_picture.url
+        if obj.user.profile_picture: return obj.user.profile_picture.url 
+        return None
     
     
     def get_blog_info(self,obj):
@@ -48,8 +49,10 @@ class BlogSerializer(serializers.ModelSerializer):
         return obj.user.first_name
 
     def get_user_image(self,obj):
-        return obj.user.profile_picture.url
-
+        if obj.user.profile_picture: 
+            return obj.user.profile_picture.url 
+        return None
+    
     def get_total_likes(self,obj):
         return obj.likes.count()
     

@@ -1,17 +1,18 @@
-
+name: My-Facebook-project
 services:
 
   backend:
     build:
       context: ./facebook
       dockerfile: Dockerfile
-    command: sh -c "python3 manage.py migrate --noinput && python3 manage.py collectstatic --noinput && python3 manage.py runserver 0.0.0.0:8000"
+    command: python -m daphne -b 0.0.0.0 -p 8000 facebook.asgi:application
     volumes:
-      - ./facebook:/facebook
+    - ./facebook:/facebook 
     ports:
       - "8000:8000"
     environment:
       - DJANGO_SETTINGS_MODULE=facebook.settings
+      - DEBUG=True
 
     depends_on:
       - redis
@@ -25,14 +26,13 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./front-end:/front-end
+      - ./front-end:/front-end/src
     depends_on:
       - backend
 
   redis:
     image: redis:alpine
-    ports:
-      - '6379:6379'
+
 
   
 
@@ -40,8 +40,7 @@ services:
     image: mariadb:latest
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
-    ports:
-      - "3307:3306"
+
     volumes:
       - db-data:/var/lib/mysql
 

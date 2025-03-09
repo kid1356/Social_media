@@ -32,21 +32,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         await self.accept()
         
         try:
-            unread_notification = await self.get_unread_notification()
-            if unread_notification:
-                print("unread_________", unread_notification)
-
-
-                for notification in unread_notification:
-        
-                    await self.send(text_data=json.dumps({
-
-                        "notification": notification.message
-                    }))
-            
-                await self.mark_as_read()
-            else:
-                print("no notification")
+            await self.send_unread_notification()
         except Exception as e:
             print(f"error {e}")
 
@@ -80,7 +66,15 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         if self.is_user_online(self.user.id):
             await self.mark_as_read()
         
-        
+    async def send_unread_notification(self):
+        get_notification = await self.get_unread_notification()  
+
+        for notification in get_notification:
+
+            await self.send(text_data=json.dumps({
+                "notification": notification.message
+            }))
+        await self.mark_as_read()
     
     @database_sync_to_async
     def get_unread_notification(self):

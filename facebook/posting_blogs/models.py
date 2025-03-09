@@ -16,7 +16,7 @@ class Comment(models.Model):
 class Blogs(models.Model):
     user = models.ForeignKey(User, on_delete = models.CASCADE, related_name = 'user_blog')
     images = models.ImageField(upload_to='images/',blank=True, null=True)
-    file = models.FileField(blank=True,null=True)
+    file = models.FileField(upload_to='files/',default='',blank=True,null=True)
     text = models.TextField(max_length = 1000, null = True, blank=True)
     likes = models.ManyToManyField(User, blank=True, related_name='blog_likes')
     created_at = models.DateTimeField(auto_now_add = True)

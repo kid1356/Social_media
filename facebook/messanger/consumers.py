@@ -4,11 +4,14 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from .models import Messages,Room,MessageReadStatus
 from django.utils import timezone
 from user.models import User
-import os
-from cryptography.fernet import Fernet
 from django.core.files.base import ContentFile
 import base64
+import os
+from cryptography.fernet import Fernet
 from messanger.utils import encrypt_message_by_public_key,decrypt_message_by_private_key
+from django.core.cache import cache
+from asgiref.sync import sync_to_async
+
 import logging
 
 
@@ -82,12 +85,51 @@ class ChatConsumer(AsyncWebsocketConsumer):
             text_data_json = json.loads(text_data)    #receiving message
             message = text_data_json.get('message',None)
             file_data = text_data_json.get('file',None)
-            file_name = text_data_json.get('fileName', None)
-
+            file_name = text_data_json.get('fileName',None)
             latitude = text_data_json.get('latitude',None)
             longitude = text_data_json.get('longitude',None)
 
-            
+
+            if file_data and "chunk_index" in text_data_json and "total_chunks" in text_data_json:
+                chunk_index = int(text_data_json['chunk_index'])
+                total_chunks = int(text_data_json['total_chunks'])
+                identifier = file_name or "default_file"
+                mime_type = text_data_json.get('mime_type','application/octet-stream')
+
+                cache_key = f'file_chunks_{self.user.id}_{identifier}'
+                chunks_data = await sync_to_async(cache.get)(cache_key)
+                if not chunks_data:
+                    chunks_data = {'total': total_chunks, 'chunks': {}, 'mime_type':mime_type}
+                else:
+                    if 'mime_type' not in chunks_data:
+                        chunks_data['mime_type'] = mime_type
+
+                # Store the chunk after stripping extra whitespace.
+                chunks_data['chunks'][chunk_index] = file_data.strip()
+                await sync_to_async(cache.set)(cache_key, chunks_data, timeout=300)
+                logger.info(f"Received chunks {chunk_index + 1}/{total_chunks} for the file {identifier}")
+
+
+                if len(chunks_data['chunks']) == total_chunks:
+
+                    sorted_indexes = sorted(chunks_data['chunks'].keys())
+                    all_data = ''.join([chunks_data['chunks'][i] for i in sorted_indexes])
+                    mime_type = chunks_data['mime_type']
+
+
+                    full_file_data = f'data:{mime_type};base64,{all_data}'
+                    await sync_to_async(cache.delete)(cache_key)
+                    file_data = full_file_data
+
+                    try:
+                        decoded_data = base64.b64decode(all_data)
+                        logger.info(f"Successfully decoded data of length: {len(decoded_data)}")
+                    except Exception as e:
+                        logger.error(f"Error decoding data: {str(e)}")
+                else:
+                    return  
+
+
             data_to_encrypt = {
                 "sender_id":self.user.id,
                 "sender_name":self.user.first_name,
@@ -245,13 +287,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def save_message(self,data):
-        
         file = None
         if data['file']:
             file_format, filestr = data['file'].split(';base64,')
-            extension = file_format.split('/')[-1]
-            file_name = data['file_name'] or f'default_file.{extension}'
+            extention = file_format.split('/')[-1]
+            file_name = data['file_name'] or f'default_file.{extention}'
             file = ContentFile(base64.b64decode(filestr), name=file_name)
+
 
         receiver = None
         if self.room_name.startswith("private_"):
