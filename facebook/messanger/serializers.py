@@ -40,11 +40,13 @@ class RoomSerializer(serializers.ModelSerializer):
         return participants
     
     def get_last_message(self,obj):
-        message = obj.messages.order_by('-time_stamp').first()
+        user = self.context['request'].user
+        message = obj.messages.exclude(deleted_by=user).filter(deleted_for_everyone=False).order_by('-time_stamp').first()
         return message.text if message else None
     
     def get_last_message_time(self, obj):
-        time = obj.messages.order_by('-time_stamp').first()
+        user = self.context['request'].user
+        time = obj.messages.exclude(deleted_by=user).filter(deleted_for_everyone=False).order_by('-time_stamp').first()
         return time.time_stamp if time else None
     
     def get_unread_messages_count(self, obj):
@@ -52,8 +54,9 @@ class RoomSerializer(serializers.ModelSerializer):
         unread = MessageReadStatus.objects.filter(
             message__room = obj,
             user =user,
-            is_read = False
-        ).count()
+            is_read = False,
+            message__deleted_for_everyone = False
+        ).exclude(message__deleted_by =user).count()
         return unread
     
 class GroupRoomSerializer(serializers.ModelSerializer):

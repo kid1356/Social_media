@@ -103,6 +103,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'posting_blogs.tasks.delete_expired_stories',
         'schedule': crontab(minute=0, hour=0),  
     },
+    'delete_older_messages':{
+        'task':'messanger.tasks.delete_message_from_DB',
+        'schedule': crontab(minute=0, hour=0)
+    }
 }
 
 

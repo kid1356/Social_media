@@ -4,7 +4,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
-from django.shortcuts import get_object_or_404
+from datetime import timedelta
+from django.utils.timezone import now
 from user.models import User
 from rest_framework.pagination import PageNumberPagination
 
@@ -15,22 +16,19 @@ from rest_framework.pagination import PageNumberPagination
 def Group_private_chat_view(request,room_name):
     return render(request, 'private_chat.html',{'room_name':room_name})
 
-class MessageCreateView(APIView):
-    def post(self, request,*args, **kwargs):
-        serializer = MessageSerializer(data = request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(sender = request.user)
-        
-        return Response({"msg created":serializer.data}, status=status.HTTP_201_CREATED)
-
 
 class GetRoomInfo(APIView):
     permission_classes = [IsAuthenticated]
     def get(self,request):
-        
-        user =request.user
         try:
-            rooms = Room.objects.filter(members = user)
+            rooms = Room.objects.filter(members = request.user).filter(
+                models.Exists(
+                    Messages.objects.filter(
+                        room = models.OuterRef('pk'),
+                        deleted_for_everyone =False,
+                    ).exclude(deleted_by = request.user)
+                )
+            )
             room_type = request.query_params.get('room_type',None)
 
             if room_type:
@@ -53,11 +51,16 @@ class GetAllRoomChatView(APIView):
     
     def get(self, request, room_name):
         try:
-            rooms = Room.objects.get(name =room_name, members =request.user)
+            room = Room.objects.get(name =room_name, members =request.user)
         except Room.DoesNotExist:
             return Response("Room does not exist", status= status.HTTP_404_NOT_FOUND)
         
-        messages = Messages.objects.filter(room = rooms).order_by('-time_stamp')
+        messages = Messages.objects.filter(
+                room = room,
+                deleted_for_everyone=False
+            ).exclude(
+                deleted_by= request.user
+                ).order_by('-time_stamp')
       
         if messages.exists():
             paginator = PageNumberPagination()
@@ -73,31 +76,73 @@ class GetAllRoomChatView(APIView):
 
 
 
-class ReceiverView(APIView):
-    def get(self, request):
-        # Filter messages where the current user is either the sender or receiver
-        messages = Messages.objects.filter(models.Q(sender=request.user) | models.Q(receiver=request.user))
-        serializer = MessageSerializer(messages, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 
 #Deleting messages
-class DeleteMessageView(APIView):
+class DeleteMessageForMeView(APIView):
+    permission_classes = [IsAuthenticated]
     def delete(self,request,id):
-        message = get_object_or_404(Messages, id=id)
+        try:
+            message = Messages.objects.get(id=id)
 
-        if request.user == message.sender or request.user == message.receiver:
-            serializer = MessageSerializer(message)
-            msg_deleted = serializer.data
+            if request.user in message.room.members.all():
+                message.deleted_by.add(request.user)
+                message.deleted_at =now()
+                message.save()
+
+                return Response({'message':'Deleted for You'},status=status.HTTP_200_OK)
+        
+        except Messages.DoesNotExist:
+            return Response({'error': 'Message not found'},status=status.HTTP_404_NOT_FOUND)
+        
+
+class DeleteMessageForEveryOneView(APIView):
+    permission_classes = [IsAuthenticated]
+    def delete(self, request, id):
+        try:
+            message = Messages.objects.get(id=id)
+
+            if request.user != message.sender:
+                return Response({'error': "only sender Delete message for everyone"},status=status.HTTP_403_FORBIDDEN)
             
-            message.delete()
-            return Response({"the message is deleted": msg_deleted},status=status.HTTP_200_OK)
-    
-        else:
-            return Response('You are not authorized to do this action', status=status.HTTP_401_UNAUTHORIZED)
+            time_limit = message.time_stamp + timedelta(hours=1)
+            if now() > time_limit:
+                return Response({'error':'Message delete time exceeded'}, status=status.HTTP_403_FORBIDDEN)
+            
+            message.deleted_for_everyone = True
+            message.deleted_at =now()
+                
+            message.save()
+
+            return Response({'message':'Message is Deleted for everyone'},status=status.HTTP_200_OK)
+        except Messages.DoesNotExist:
+            return Response({'error': 'Message not found'},status=status.HTTP_404_NOT_FOUND)
 
               
- 
+class DeleteEntireConversation(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, room_id):
+        try:
+            room = Room.objects.get(id=room_id)
+
+            if request.user not in room.members.all():
+                return Response({'error':'You can not delete this conversation'}, status=status.HTTP_403_FORBIDDEN)
+            
+            messages = Messages.objects.filter(room=room)
+
+            for message in messages:
+                message.deleted_by.add(request.user)
+                message.deleted_at = now()
+            
+            message.save()
+            
+            return Response({'message':'Entire conversation is deleted'}, status=status.HTTP_200_OK)
+
+        except Room.DoesNotExist:
+            return Response({'error':'Room not found'}, status=status.HTTP_404_NOT_FOUND)
+
            
         
 

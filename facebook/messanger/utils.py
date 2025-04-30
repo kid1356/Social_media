@@ -38,8 +38,8 @@ def generate_key_pair():
 
 def encrypt_message_by_public_key(public_key_pem, message):
   
-    if isinstance(message, dict):
-        message = json.dumps(message).encode('utf-8') 
+    if isinstance(message, str):
+        message = message.encode('utf-8')
 
     if isinstance(public_key_pem, str):
         public_key_pem = clean_pem_key(public_key_pem)

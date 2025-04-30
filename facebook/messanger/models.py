@@ -27,12 +27,15 @@ class Room(models.Model):
 
 class Messages(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
-    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages', null=True)
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages', null=True,blank=True)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='messages')
     text = models.TextField(max_length=1000, null=True, blank=True)
     file = models.FileField(upload_to='files/', blank=True, null=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    deleted_by = models.ManyToManyField(User, blank=True)
+    deleted_for_everyone =models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     is_read = models.BooleanField(default=False)
     time_stamp = models.DateTimeField(auto_now_add=True)
 

@@ -298,12 +298,14 @@ class CreateStory(APIView):
 class GetStory(APIView):
     def get(self, request):
         user =request.user
+        try:
+            story = Story.objects.filter(expire_at__gt = timezone.now(), is_expired =False).exclude(viewers = user)
 
-        story = Story.objects.filter(expire_at__gt = timezone.now(), is_expired =False).exclude(viewers = user)
+            serializer = StorySerializer(story, many = True)
 
-        serializer = StorySerializer(story, many = True)
-
-        return Response({'Stories':serializer.data}, status=status.HTTP_200_OK)
+            return Response({'Stories':serializer.data}, status=status.HTTP_200_OK)
+        except Story.DoesNotExist:
+            return Response("Story not found or expired",status=status.HTTP_404_NOT_FOUND)
     
 
 class TrackViewers(APIView):

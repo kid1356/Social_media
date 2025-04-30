@@ -150,16 +150,24 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def handle_private_messages(self, data):
         receiver_public_key = await self.get_receipent_key_private_room(self.room, self.user)
         try:
-            encyrpt_msg = encrypt_message_by_public_key(receiver_public_key['public_key'],data)
+            symmetric_key = Fernet.generate_key()
+            cipher_suite = Fernet(symmetric_key)
+            encrypted_message = cipher_suite.encrypt(json.dumps(data).encode())
+
+            encrypted_key = encrypt_message_by_public_key(receiver_public_key['public_key'],symmetric_key.decode())
+            
         except Exception as e:
-            logger.error(f'Encryption erroe in private message{e}')
+            logger.error(f'Encryption error in private message {e}')
+            return 
+        
         save_message = await self.save_message(data)
         await self.update_read_status(save_message)
         await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     "type": "chat_message",
-                    "encrypt_message": encyrpt_msg,
+                    "encrypt_message": encrypted_message,
+                    "encrypted_key":encrypted_key,
                     "members":{
                         'receiver_id':receiver_public_key['receiver_id'],
                         'receiver_name':receiver_public_key['receiver_name']
@@ -200,14 +208,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def chat_message(self, event):
         encrypted_msg = event["encrypt_message"]
+        
         members = event["members"]
 
         if self.room.room_type == 'private': #Asymmetric decryption
+            encrypted_key = event["encrypted_key"]
             private_key = await self.get_receiver_private_key(members['receiver_id'])
             try:
-                decrypted_message = decrypt_message_by_private_key(private_key,encrypted_msg)
+                decrypted_symmetric_key = decrypt_message_by_private_key(private_key,encrypted_key)
+                
+                cipher_suite = Fernet(decrypted_symmetric_key)
+                decrypted_data = cipher_suite.decrypt(encrypted_msg)
+
+                decrypted_message = json.loads(decrypted_data.decode())
+
             except Exception as e:
                 logger.error(f'Decryption error in private message{e}')
+                return 
         else: #symmetric decryption
             decrypted_message = self.decrypt_message(encrypted_msg)
         await self.send(text_data=json.dumps(
