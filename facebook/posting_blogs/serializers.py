@@ -1,5 +1,6 @@
-from user.serializers import *
-from .models import *
+from user.serializers import UserProfileSerializer
+from rest_framework import serializers
+from .models import Comment, Blogs,Followers,Story
 
 class CommentSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
