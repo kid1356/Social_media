@@ -1,5 +1,16 @@
 .env
-
 db.sqlite3
-staticfiles
+staticfiles/
 data.sql
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# add these too
+*.env
+.env.*
+media/
+*.log
+node_modules/
+front-end/.env
