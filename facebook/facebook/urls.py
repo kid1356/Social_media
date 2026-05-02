@@ -21,7 +21,7 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from django.conf import settings
 from django.conf.urls.static import static
-
+from drf_yasg.generators import OpenAPISchemaGenerator
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -34,8 +34,28 @@ schema_view = get_schema_view(
    ),
    public=True,
    permission_classes=(permissions.AllowAny,),
+   authentication_classes=[],
 )
 
+
+class BothHttpAndHttpsSchemaGenerator(OpenAPISchemaGenerator):
+    def get_schema(self, request=None, public=False):
+        schema = super().get_schema(request, public)
+        schema.schemes = ["http", "https"]
+        return schema
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Facebook APIs",
+        default_version='v1',
+        description="Test description",
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+    generator_class=BothHttpAndHttpsSchemaGenerator,
+    # ✅ JWT token authorize button
+    authentication_classes=[],
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
