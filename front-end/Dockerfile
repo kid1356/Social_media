@@ -1,5 +1,5 @@
 # Stage 1: Build the React app
-FROM node:20.18.0 AS build
+FROM node:20.14.0-alpine3.19 AS build
 
 # Set working directory
 WORKDIR /front-end
@@ -17,7 +17,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Serve the built application
-FROM node:20.18.0
+FROM node:20.14.0-alpine3.19
 
 # Install a lightweight static file server
 RUN npm install -g serve
