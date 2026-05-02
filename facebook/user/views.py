@@ -6,7 +6,8 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated,IsAdminUser
-from .permissions import *
+from user.permissions import IsOwner
+from drf_yasg.utils import swagger_auto_schema
 # Create your views here.
 
 def login(request):
@@ -34,6 +35,10 @@ class RegisterView(APIView):
             
 
 class LoginView(APIView):
+    @swagger_auto_schema(
+            request_body=LoginSerializer,
+            responses={200: LoginSerializer}
+    )
     def post(self, request):
         serializer = LoginSerializer(data = request.data)
         serializer.is_valid(raise_exception=True)
