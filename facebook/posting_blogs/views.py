@@ -1,10 +1,14 @@
-from django.shortcuts import render
-from user.views import *
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated,BasePermission
+from rest_framework.response import Response
+from adrf.views import APIView
+from drf_yasg.utils import swagger_auto_schema
 from .serializers import *
 from .models import *
 from rest_framework.pagination import PageNumberPagination
 from user.serializers import UserProfileSerializer
-
+from asgiref.sync import sync_to_async
+from django.db import transaction
 
 #custom permissions
 class IsOwnerOfBlog(BasePermission):
@@ -13,169 +17,221 @@ class IsOwnerOfBlog(BasePermission):
             return True
 
         return obj.user == request.user
-        
 
-# Create your views here.  
+
+# # Create your views here.  
+# class Blog_Create_view(APIView):
+#     async def post(self, request):
+#         try:
+#             async with transaction.atomic():
+#                 serializer = BlogSerializer(data= request.data)         #posting Blogs 
+#                 serializer.is_valid(raise_exception=True)
+#                 saved_blog=await sync_to_async(serializer.save)(user = request.user)
+#                 blog = await Blogs.objects.select_related('user').aget(id=saved_blog.id)
+
+#                 data = await sync_to_async(lambda: BlogSerializer(blog).data)()
+#                 return Response({'The Blogs is Posted':data},status=status.HTTP_201_CREATED)
+#         except Exception as e:
+#             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class Blog_Create_view(APIView):
-    def post(self, request):
-        serializer = BlogSerializer(data= request.data)         #posting Blogs 
-        serializer.is_valid(raise_exception=True)
-        serializer.save(user = request.user)
+    @swagger_auto_schema(
+            request_body=BlogSerializer,
+            responses = {201: BlogSerializer}
+    )
+    async def post(self, request):
+        try:
+            @sync_to_async
+            def create_blog():
+                with transaction.atomic():
+                    serializer = BlogSerializer(data=request.data)
+                    serializer.is_valid(raise_exception=True)
+                    saved_blog = serializer.save(user=request.user)
+                    
+                    blog = Blogs.objects.select_related('user').get(id=saved_blog.id)
+                    
+                    return BlogSerializer(blog).data
 
-        return Response({'The Blogs is Posted':serializer.data},status=status.HTTP_201_CREATED)
+            data = await create_blog()
+            return Response({'The Blog is Posted': data}, status=status.HTTP_201_CREATED)
 
-
-
-#Getting all blogs or post from a specific User
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+#Getting all blogs or post from a specific User    
 class GetAllUserBlogsView(APIView):
-    def get(self,request,user_id):
-        try:                                                                
-            user = Blogs.objects.filter(user_id=user_id)
-        except User.DoesNotExist:
-            return Response("User blogs not found",status=status.HTTP_404_NOT_FOUND)
+    permission_classes = [IsAuthenticated]
+    async def get(self,request):
+
+        blogs = await sync_to_async(list)(Blogs.objects.select_related('user').filter(user=request.user).order_by('-created_at'))
+
         paginator = PageNumberPagination()
-        paginator.page_size = 15
-        result = paginator.paginate_queryset(user, request)
+        paginator.page_size = 5
+        result = await sync_to_async(paginator.paginate_queryset)(blogs,request)
+        data = await sync_to_async(lambda: BlogSerializer(result,many =True).data)()
 
-        serializer = BlogSerializer(result,many = True)
-
-        return paginator.get_paginated_response(serializer.data)
+        return paginator.get_paginated_response(data)
+        
+    
 
         
 
 # getting single blogs by id
 class Blog_Get_view(APIView):
-        
-    def get(self,request,id):
+    permission_classes = [IsAuthenticated]
+    async def get(self,request,id):
         try:
-            blog = Blogs.objects.get(id=id)
-            serializer = BlogSerializer(blog)
-            return Response({'Blog':serializer.data},status=status.HTTP_200_OK)
+
+            blog = await Blogs.objects.select_related('user').prefetch_related('likes').aget(id=id)
+            data = await sync_to_async(lambda: BlogSerializer(blog).data)()    
+            return Response({"data":data},status=status.HTTP_200_OK)
         except Blogs.DoesNotExist:
             return Response({"Blog not Found"},status=status.HTTP_404_NOT_FOUND)
 
 
 # Updating blog 
 class Blog_Patch_view(APIView):   
-    permission_classes = [IsOwnerOfBlog]
-    def patch(self, request,id):
-        try:
-            blog = Blogs.objects.get(id=id)
 
-            self.check_object_permissions(request,blog)
+    permission_classes = [IsAuthenticated,IsOwnerOfBlog]
+
+    async def patch(self, request,id):
+        try:
+            blog = await Blogs.objects.aget(id=id)
+
+            await sync_to_async(self.check_object_permissions)(request,blog)
 
             serializer = BlogSerializer(blog, data=request.data, partial = True)
         
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response({'updated successfully':serializer.data},status=status.HTTP_200_OK)
+            await sync_to_async(serializer.is_valid)(raise_exception=True)
+
+            await sync_to_async(serializer.save)()
+            updated_blog = await Blogs.objects.select_related('user').prefetch_related('likes').aget(id=id)
+            data = await sync_to_async(lambda: BlogSerializer(updated_blog).data)()
+            return Response({'updated successfully':data},status=status.HTTP_200_OK)
         except Blogs.DoesNotExist:
             return Response('Blog Does not FOund',status=status.HTTP_404_NOT_FOUND)
 
 
 #Deleting blog
 class DeleteBlogView(APIView):
-    permission_classes = [IsOwnerOfBlog]
-    def delete(self, request,id):
+    permission_classes = [IsAuthenticated,IsOwnerOfBlog]
+    async def delete(self, request,id):
         try:
-            blog = Blogs.objects.get(id=id)
-            serializer = BlogSerializer(blog)
-            blog_serialized = serializer.data
-            self.check_object_permissions(request, blog)
-            blog.delete()
-            return Response({"the blog is deleted":blog_serialized}, status=status.HTTP_200_OK)
+            blog = await Blogs.objects.aget(id=id)
+            await sync_to_async(self.check_object_permissions)(request, blog)
+            data = await sync_to_async(lambda: BlogSerializer(blog).data)()
+
+            await blog.adelete()
+            return Response({"the blog is deleted":data}, status=status.HTTP_200_OK)
 
         except Blogs.DoesNotExist:
-            return Response({"blog DOes not found or already deleted"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"blog Does not found or already deleted"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 
 
 # liking A blog
 class Like_Blog_view(APIView):
-    def post(self,request,id):
+    permission_classes= [IsAuthenticated]
+    async def post(self,request,id):
         user = request.user
 
         try:
-            blog = Blogs.objects.get(id=id)
+            blog = await Blogs.objects.aget(id=id)
+
+        
+            user_liked = await sync_to_async(blog.likes.filter(id=user.id).exists)()
+            if user_liked:
+                await sync_to_async(blog.likes.remove)(user)
+                message = 'Unliked successfully'
+            else:
+                await sync_to_async(blog.likes.add)(user)
+                message = 'Liked successfully'
+
+            return Response({"message":message},status=status.HTTP_200_OK) 
         except Blogs.DoesNotExist:
-            return Response({'Blog Not found'},status=status.HTTP_404_NOT_FOUND)
-
-        if user in blog.likes.all():
-            blog.likes.remove(user)
-            message = 'Unliked successfully'
-        else:
-            blog.likes.add(user)
-            message = 'Liked successfully'
-
-        return Response({"message":message},status=status.HTTP_200_OK)     
+            return Response({'Blog Not found'},status=status.HTTP_404_NOT_FOUND)    
 
 
 
 class Comment_Create_View(APIView):
-   
-    def post(self, request,blog_id):
+    permission_classes =[IsAuthenticated]
+    @swagger_auto_schema(
+            request_body=CommentSerializer,
+            responses = {200: CommentSerializer}
+    )
+    async def post(self, request,blog_id):
         try:
-            blog = Blogs.objects.get(id=blog_id)
+            blog =await Blogs.objects.aget(id=blog_id)
         except Blogs.DoesNotExist:
             return Response("Blog not found", status=status.HTTP_404_NOT_FOUND)
         serializer = CommentSerializer( data = request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(user= request.user, blog=blog)
+        await sync_to_async(serializer.is_valid)(raise_exception=True)
+        saved_coment = await sync_to_async(serializer.save)(user= request.user, blog=blog)
 
-        return Response({"Commented successfully":serializer.data},status=status.HTTP_201_CREATED)
+        comment_data = await Comment.objects.select_related('user','blog','blog__user').aget(id=saved_coment.id)
+
+        data = await sync_to_async(lambda: CommentSerializer(comment_data).data)()
+        return Response({"Commented successfully":data},status=status.HTTP_201_CREATED)
     
 
 
 class Comment_Get_view(APIView):    
-    def get(self,request,id):
+    async def get(self,request,id):
         try:
-            comment = Comment.objects.get(id=id)
-            serializer = CommentSerializer(comment)
-            return Response({'Comment':serializer.data},status=status.HTTP_200_OK)
+            comment = await Comment.objects.select_related('user','blog__user').aget(id=id)
+            data =  CommentSerializer(comment).data
+            return Response({'data':data},status=status.HTTP_200_OK)
         except Comment.DoesNotExist:
             return Response("comment does not found", status=status.HTTP_404_NOT_FOUND)
-        
+           
+    
 class GetAllUserCommentsView(APIView):
-    def get(self,request,user_id):
+    async def get(self,request):
         try:
-            user = Comment.objects.filter(user_id=user_id)
+            user = await sync_to_async(list)(Comment.objects.select_related('user').filter(user=request.user))
         except Comment.DoesNotExist:
             return Response("User comments not found", status=status.HTTP_404_NOT_FOUND)
 
         paginator = PageNumberPagination()
-        paginator.page_size = 15
-        result = paginator.paginate_queryset(user, request)
+        paginator.page_size = 3
+        result = await sync_to_async(paginator.paginate_queryset)(user, request)
 
-        serializer = CommentSerializer(result, many = True)
+        data = await sync_to_async(lambda: CommentSerializer(result, many = True).data)()
 
-        return paginator.get_paginated_response(serializer.data)     
-
+        return paginator.get_paginated_response(data)   
     
         
 class Comment_Put_view(APIView):
-    permission_classes = [IsOwnerOfBlog]
-    def put(self, request,id):
+    permission_classes = [IsAuthenticated,IsOwnerOfBlog]
+    @swagger_auto_schema(
+            request_body=CommentSerializer,
+            responses = {200: CommentSerializer}
+    )
+    async def put(self, request,id):
         try:
-            comment = Comment.objects.get(id=id)
-            self.check_object_permissions(request,comment)
+            comment = await Comment.objects.aget(id=id)
+            await sync_to_async(self.check_object_permissions)(request,comment)
             serializer = CommentSerializer(comment, data=request.data)
         
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response({'updated successfully':serializer.data},status=status.HTTP_200_OK)
+            await sync_to_async(serializer.is_valid)(raise_exception=True)
+            await sync_to_async(serializer.save)()
+            updated_comment = await Comment.objects.select_related('user').aget(id=id)
+            data = await sync_to_async(lambda: CommentSerializer(updated_comment).data)()
+            return Response({'updated successfully':data},status=status.HTTP_200_OK)
         except Comment.DoesNotExist:
-            return Response("comment does not found", status=status.HTTP_404_NOT_FOUND)
+            return Response("comment does not found", status=status.HTTP_404_NOT_FOUND) 
 
 class Comment_Delete_view(APIView):  
-    def delete(self,request,id):
+    permission_classes = [IsAuthenticated]
+    async def delete(self,request,id):
       try:  
-        comment= Comment.objects.get(id=id)
-        serializer = CommentSerializer(comment)
-        serializer_data = serializer
-        comment.delete()
+        comment= await Comment.objects.aget(id=id)
+        data =await  sync_to_async(lambda: CommentSerializer(comment).data)()
+        await comment.adelete()
 
-        return Response({'the comment is deleted':serializer_data},status=status.HTTP_200_OK)
+        return Response({'the comment is deleted':data},status=status.HTTP_200_OK)
       except Comment.DoesNotExist:
             return Response("comment does not found", status=status.HTTP_404_NOT_FOUND)
       
