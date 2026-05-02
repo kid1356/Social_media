@@ -14,7 +14,7 @@ urlpatterns = [
     path('get/<str:room_name>/chats/',GetAllRoomChatView.as_view(), name = "get-room-chat"),
 
 # create room
-    path('create_group/',CreateGroupView.as_view(), name='create-group'),
+    path('create-group/',CreateGroupView.as_view(), name='create-group'),
     path('api/private-chat/<int:user_id>/', PrivateChatInitView.as_view(), name='private-chat-init'),
     path('update/<int:group_id>/add_members/',AddGroupMembersView.as_view(), name='add-members-in-group'),
 
