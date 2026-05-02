@@ -25,7 +25,6 @@ class UserManager(BaseUserManager):
             **extra_fields
         )
     
-
 class User(AbstractBaseUser,PermissionsMixin):
     CHOICE_FIELDS  = (
         ('Male', 'Male'),
