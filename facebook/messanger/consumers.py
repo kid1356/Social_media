@@ -20,8 +20,7 @@ logger = logging.getLogger(__name__)
 PRIVATE_ROOM_PREFEIX = 'private_'
 ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY').encode()
 
-online_users = set()
-room_users = {}
+
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -37,16 +36,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.user = self.scope["user"]
         self.room = await self.get_room(self.room_name)
 
+        if not self.room:
+            await self.close()
+            return 
         
+        if not await self.validate_connection():
+            return 
         await self.add_user_to_room()
         await self.accept()
         logger.info(f"User {self.user} connected to room {self.room_name}")
         
         await self.send_unread_message()
 
-        logger.info(f"online_______room__{room_users}")
-        
-        logger.info(f"userss.............{online_users}")
            
     async def validate_connection(self):
         if not self.user.is_authenticated or not await self.is_user_allowed_in_room(self.user, self.room_name):
@@ -61,8 +62,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
    
 
     async def add_user_to_room(self):
-        online_users.add(self.user.id)
-        room_users.setdefault(self.room_name, set()).add(self.user.id)
+        await cache.aset(
+        f"online:{self.user.id}", 1,
+        timeout=3600
+        )
+        await cache.aset(
+            f"room:{self.room_name}:{self.user.id}",1,
+            timeout=3600
+        )
         await self.channel_layer.group_add(self.room_group_name, self.channel_name )
 
 
@@ -73,10 +80,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await super().disconnect(code)
     
     async def remove_user_from_room(self):
-        if self.room_name in room_users:
-            room_users[self.room_name].discard(self.user.id)   
-        if self.user.id in online_users:
-            online_users.remove(self.user.id)
+        await cache.adelete(
+            f"room:{self.room_name}:{self.user.id}"
+        )
+
+        active_room_count_key = f"active_rooms_count:{self.user.id}"
+        count = await cache.aget(active_room_count_key) or 0
+        count = max(0, int(count) - 1)
+ 
+        if count == 0:
+            await cache.adelete(f"online:{self.user.id}")
+            await cache.adelete(active_room_count_key)
+        else:
+            await cache.aset(active_room_count_key, count, timeout=3600)
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     
@@ -200,9 +216,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
         room_members  = await self.get_room_members(self.room)
 
         for member in room_members:
-                await self.create_read_status(member, message)
+            await self.create_read_status(member,message)
+        
+        await self.mark_message_as_read(self.user,message)
+
         for member in room_members:
-            if self.user_isOnline(member.id) and self.room_name in room_users and member.id in room_users[self.room_name]:
+            if member.id == self.user.id:
+                continue
+            if await self.user_isOnline(member.id) and await self.is_user_in_room(member.id):
                 await self.mark_message_as_read(member, message)
 
 
@@ -239,27 +260,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def send_unread_message(self):                # sending unread messages to web socket
         unread_messages = await self.get_unread_messages(self.user.id, self.room.id)
-        for message in unread_messages:
-            data = {
-                "text": await self.get_message_text(message),  
-                "sender_id": await self.get_sender_id(message),
-                "sender_name": await self.get_sender_name(message),
-                
-                "file": await self.get_message_file(message),  
-                "file_name": message.file.name if message.file else None, 
-                "latitude": message.latitude if message.latitude else None,
-                "longitude": message.longitude if message.longitude else None,
-        }
+        if not unread_messages:
+            return
         
-            members = await self.get_room_members_name(self.room,self.user)
-            await self.send(text_data=json.dumps(                       
-                    {
-                        "message": data,
-                        "members":members
-                        
-                    }))
+        members = await self.get_room_members_name(self.room,self.user)
 
-            await self.mark_message_as_read(self.user, message)
+        for data in unread_messages:
+            await self.send(text_data=json.dumps(                       
+                        {
+                            "message": data,
+                            "members":members
+                            
+                        }))
+
+        await self.mark_all_read(self.user.id, self.room.id)
 
 
 
@@ -281,13 +295,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return f"chat_{room_name}"
 
 
-    def user_isOnline(self,user_id):
-        if user_id in online_users:
-            return True                     # checking if user is in set()
-        else:
-            return False
+    async def user_isOnline(self,user_id):
+        results = await cache.aget(
+            f"online:{user_id}"
+        )
+        return results is not None
 
-
+    async def is_user_in_room(self, user_id):
+        result = await cache.aget(
+            f"room:{self.room_name}:{user_id}"
+        )
+        return result is not None
 
     @database_sync_to_async
     def is_user_allowed_in_room(self, user,room_name):
@@ -381,13 +399,32 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_unread_messages(self, user_id, room_id):   
                
-        messages = list(Messages.objects.filter(
+        messages = Messages.objects.filter(
             room_id=room_id,
             read_statuses__user_id=user_id,
             read_statuses__is_read=False
-        ).select_related('sender').order_by('time_stamp'))
-        return messages
+        ).select_related('sender').order_by('time_stamp')
+        result = []
+        for msg in messages:
+            result.append({
+                "text": msg.text,
+                "sender_id": msg.sender.id,
+                "sender_name": msg.sender.first_name,
+                "file": msg.file.url if msg.file else None,
+                "file_name": msg.file.name if msg.file else None,
+                "latitude": msg.latitude if msg.latitude else None,
+                "longitude": msg.longitude if msg.longitude else None,
+            })
+        return result
     
+    @database_sync_to_async
+    def mark_all_read(self,user_id, room_id):
+        MessageReadStatus.objects.filter(
+            user_id=user_id,
+            message__room_id = room_id,
+            is_read = False
+        ).update(is_read=True, read_at = timezone.now())
+
     @database_sync_to_async
     def mark_message_as_read(self, user, message):
         MessageReadStatus.objects.update_or_create(user=user, message=message,
@@ -396,22 +433,5 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def create_read_status(self, user, message):
         MessageReadStatus.objects.get_or_create(user=user, message=message, defaults={'is_read': False})
-
-    @database_sync_to_async
-    def get_sender_name(self, message):     
-        return message.sender.first_name
-    
-    @database_sync_to_async
-    def get_sender_id(self, message):      
-        return message.sender.id
-
-    @database_sync_to_async
-    def get_message_text(self, message):    # getting the sender message
-        return message.text
-
-    @database_sync_to_async
-    def get_message_file(self,message):
-        return message.file.url if message.file else None
-
 
         
