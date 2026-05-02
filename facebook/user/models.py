@@ -1,6 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser,BaseUserManager
-from pyotp import random_base32
+from django.contrib.auth.models import AbstractBaseUser,BaseUserManager,PermissionsMixin
 # Create your models here.
 
 class UserManager(BaseUserManager):
@@ -18,19 +17,16 @@ class UserManager(BaseUserManager):
 
     def create_superuser(self, email,password=None, **extra_fields):
 
-        user = self.create_user(
+        extra_fields.setdefault('is_admin', True)
+        extra_fields.setdefault('is_superuser', True)
+        return self.create_user(
             email = email,
             password = password,
             **extra_fields
         )
-
-        user.is_admin = True
-        user.save(using = self._db)
-
-        return user
     
 
-class User(AbstractBaseUser):
+class User(AbstractBaseUser,PermissionsMixin):
     CHOICE_FIELDS  = (
         ('Male', 'Male'),
         ('Female', 'Female'),
@@ -67,21 +63,15 @@ class User(AbstractBaseUser):
     def has_perm(self, perm, obj=None):
      "Does the user have a specific permission?"
       # Simplest possible answer: Yes, always
-     return self.is_admin
+     return self.is_admin or self.is_superuser
 
     def has_module_perms(self, app_label):
       "Does the user have permissions to view the app `app_label`?"
       # Simplest possible answer: Yes, always
-      return True
+      return self.is_admin or self.is_superuser
 
     @property
     def is_staff(self):
       "Is the user a member of staff?"
       # Simplest possible answer: All admins are staff
       return self.is_admin
-    
-    # def generated_otp_seceret_key(self):
-    #    if not self.secret_key:
-    #       secret_key = random_base32()
-    #       self.secret_key = secret_key
-    #       self.save()
