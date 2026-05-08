@@ -1,10 +1,6 @@
-from .models import *
+from .models import User
 from rest_framework import serializers
-from facebook.settings import *
 from django.core.mail import EmailMessage
-from django.utils.crypto import get_random_string
-from django.utils import timezone
-from messanger.utils import generate_key_pair
 
 class Util:
     @staticmethod
@@ -43,19 +39,6 @@ class RegisterSerilizer(serializers.ModelSerializer):
             raise serializers.ValidationError("both passsword should be same. ")
         
         return attrs
-     
-    def create(self, validated_data):
-        validated_data.pop('confirm_password')
-
-        private_key, public_key= generate_key_pair()
-
-        user =  User.objects.create_user(**validated_data)
-
-        user.private_key = private_key
-        user.public_key = public_key
-        user.save()
-
-        return user
     
     
 
@@ -96,51 +79,10 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
 class EmailSerializer(serializers.Serializer):
     email = serializers.EmailField(max_length = 255)
     
-    def validate(self, attrs):
-        email = attrs.get('email')
-     
-        try:  
-           user = User.objects.get(email = email)
-        except User.DoesNotExist:
-            return serializers.ValidationError("User does not Exists!")
-        
-    
-        otp_value = get_random_string(length=4, allowed_chars='0123456789')
-
-
-        data = {
-            'subject':"Your Password Reset OTP",
-            'body':f'Your OTP is : {otp_value}',
-            'to_email':user.email
-        }
-        
-        user.secret_key = otp_value
-        user.otp_created_at = timezone.now()
-        user.save()
-        Util.send_mail(data)
-
-        return attrs
 
 class OTPVerifySerializer(serializers.Serializer):
-    otp_value = serializers.CharField(max_length =26 )
+    otp_value = serializers.CharField(max_length =6 )
     email = serializers.EmailField(max_length = 100)
-
-    def validate(self, attrs):
-        otp_value = attrs.get('otp_value')
-        email = attrs.get('email')
-
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return serializers.ValidationError("User does not Exists!")
-        
-        if user.secret_key != otp_value:
-            raise serializers.ValidationError("Invalid OTP")
-        
-        if user.otp_created_at + timedelta(minutes=5) < timezone.now():
-            raise serializers.ValidationError("OTP is Expired")
-        
-        return attrs
 
 
 class ForgetPasswordSerializer(serializers.Serializer):
@@ -149,29 +91,10 @@ class ForgetPasswordSerializer(serializers.Serializer):
     confirm_password = serializers.CharField(max_length = 255, style={'input_type':'password'}, write_only = True)
 
     def validate(self, attrs):
-        email = attrs.get('email')
         password = attrs.get('password')
         confirm_password = attrs.get('confirm_password')
 
         if password !=  confirm_password:
             raise serializers.ValidationError("Both password should be equal")
         
-        try:
-           user= User.objects.get(email=email)
-
-        except User.DoesNotExist:
-            return serializers.ValidationError("User does not Exists!")
-        
-        attrs['user'] = user
-        
         return attrs
-    
-    def create(self, validated_data):
-        user = validated_data['user']
-        user.set_password(validated_data['password'])
-
-        user.secret_key = ''
-        user.otp_created_at = None
-        user.save()
-
-        return user
