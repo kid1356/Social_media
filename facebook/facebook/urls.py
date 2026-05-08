@@ -22,21 +22,7 @@ from drf_yasg import openapi
 from django.conf import settings
 from django.conf.urls.static import static
 from drf_yasg.generators import OpenAPISchemaGenerator
-
-schema_view = get_schema_view(
-   openapi.Info(
-      title="Facebook APIs",
-      default_version='v1',
-      description="Test description",
-      terms_of_service="https://www.google.com/policies/terms/",
-      contact=openapi.Contact(email="contact@snippets.local"),
-      license=openapi.License(name="BSD License"),
-   ),
-   public=True,
-   permission_classes=(permissions.AllowAny,),
-   authentication_classes=[],
-)
-
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 class BothHttpAndHttpsSchemaGenerator(OpenAPISchemaGenerator):
     def get_schema(self, request=None, public=False):
@@ -44,17 +30,20 @@ class BothHttpAndHttpsSchemaGenerator(OpenAPISchemaGenerator):
         schema.schemes = ["http", "https"]
         return schema
 
-schema_view = get_schema_view(
+
+schema_view = get_schema_view(        # ✅ only one schema_view
     openapi.Info(
         title="Facebook APIs",
         default_version='v1',
         description="Test description",
+        terms_of_service="https://www.google.com/policies/terms/",
+        contact=openapi.Contact(email="contact@snippets.local"),
+        license=openapi.License(name="BSD License"),
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
     generator_class=BothHttpAndHttpsSchemaGenerator,
-    # ✅ JWT token authorize button
-    authentication_classes=[],
+    authentication_classes=[JWTAuthentication],
 )
 
 urlpatterns = [
@@ -63,6 +52,5 @@ urlpatterns = [
     path('users/', include('user.urls')),
     path('messages/', include('messanger.urls')),
     path('blogs/', include('posting_blogs.urls')),
-    path('api-auth/', include('rest_framework.urls')),
 
 ]  + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
