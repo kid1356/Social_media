@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import *
+from .models import Comment, Followers, Story, Blogs, Notification
 # Register your models here.
 @admin.register(Comment)
 class CommentBlog(admin.ModelAdmin):
@@ -49,10 +49,11 @@ class notify(admin.ModelAdmin):
 
 @admin.register(Followers)
 class followers(admin.ModelAdmin):
-    list_display = ['id','user','followed_user','followers_counts','created_at']
+    list_display = ['id','user','followed_user','status','followers_counts','created_at']
     search_fields = ['user']
     ordering = ['followed_user']
 
+    readonly_fields = ['status']
     def followers_counts(self,obj):
         return Followers.objects.filter(followed_user = obj.followed_user, status = 'accepted').count()
     
