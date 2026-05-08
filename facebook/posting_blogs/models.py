@@ -45,7 +45,7 @@ class Followers(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
-        return f'{self.followed_user} following {self.user} '
+        return f'{self.user} following {self.followed_user} '
 
 
 
