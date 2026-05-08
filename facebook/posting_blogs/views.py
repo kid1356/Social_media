@@ -3,12 +3,14 @@ from rest_framework.permissions import IsAuthenticated,BasePermission
 from rest_framework.response import Response
 from adrf.views import APIView
 from drf_yasg.utils import swagger_auto_schema
-from .serializers import *
-from .models import *
+from .serializers import CommentSerializer, BlogSerializer, FollowSerializer, StorySerializer
+from posting_blogs.models import Blogs,Comment,Story,Followers
 from rest_framework.pagination import PageNumberPagination
 from user.serializers import UserProfileSerializer
+from user.models import User
 from asgiref.sync import sync_to_async
 from django.db import transaction
+from django.utils import timezone
 
 #custom permissions
 class IsOwnerOfBlog(BasePermission):
@@ -71,7 +73,7 @@ class GetAllUserBlogsView(APIView):
         result = await sync_to_async(paginator.paginate_queryset)(blogs,request)
         data = await sync_to_async(lambda: BlogSerializer(result,many =True).data)()
 
-        return paginator.get_paginated_response(data)
+        return Response(paginator.get_paginated_response(data).data,status=status.HTTP_200_OK)
         
     
 
@@ -200,7 +202,7 @@ class GetAllUserCommentsView(APIView):
 
         data = await sync_to_async(lambda: CommentSerializer(result, many = True).data)()
 
-        return paginator.get_paginated_response(data)   
+        return Response(paginator.get_paginated_response(data).data,status=status.HTTP_200_OK)   
     
         
 class Comment_Put_view(APIView):
@@ -239,149 +241,183 @@ class Comment_Delete_view(APIView):
 class User_Follow_View(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self,request,id):
-        serializer = FollowSerializer(data = request.data)
-        serializer.is_valid(raise_exception=True)
+    async def post(self,request,user_id):
+        serializer = await sync_to_async(FollowSerializer)(data = request.data)
+        await sync_to_async(serializer.is_valid)(raise_exception=True)
         user = request.user
         
         try:
-            followed_user = User.objects.get(id = id)
+            followed_user = await User.objects.aget(id = user_id)
+            
         except User.DoesNotExist:
             return Response("User Not found",status=status.HTTP_404_NOT_FOUND)
- 
-        follow_request = Followers.objects.filter(user = request.user, followed_user = followed_user).first()
-        if follow_request:
+
+        try: 
+            follow_request = await Followers.objects.filter(user = request.user, followed_user = followed_user, status__in=['pending','accepted']).afirst()
+            
+            if follow_request:
                 if follow_request.status == 'accepted':
                     return Response("you are already following this user", status=status.HTTP_400_BAD_REQUEST)
                 if follow_request.status == 'pending':
                     return Response("your request is on pending ", status=status.HTTP_400_BAD_REQUEST)
+            
+            await Followers.objects.acreate(user =user, followed_user=followed_user,status = 'pending')
+            message = "Follow request sent Successfully"
 
-        Followers.objects.create(user =user, followed_user=followed_user,status = 'pending')
-        message = "Follow request sent Successfully"
-
-        return Response({"message":message},status=status.HTTP_200_OK)
+            return Response({"message":message},status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error":str(e)},status=status.HTTP_400_BAD_REQUEST)
 
 
 class AcceptFollowView(APIView):
     permission_classes = [IsAuthenticated]
-    def post(self,request, follow_request_id):
+    async def post(self,request, follow_request_id):
         try:
-            follow = Followers.objects.get(id = follow_request_id, followed_user =request.user, status='pending')
+            follow = await Followers.objects.select_related('user').aget(id = follow_request_id, followed_user =request.user, status='pending')
             follow.status = 'accepted'
-            follow.save()
+            await follow.asave()
             return Response("Follow request accepted",status=status.HTTP_200_OK)
         except Followers.DoesNotExist:
             return Response("request Not found",status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error":str(e)},status=status.HTTP_400_BAD_REQUEST)
 
+class GetFollowPendingRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+    async def get(self,request):
+        try:
+            follows = await sync_to_async(list)(Followers.objects.select_related('user').filter(followed_user =request.user, status='pending'))
+            data =[ {
+                'id': follow.id,
+                'user':follow.user.first_name,
+                'status':follow.status
+            } for follow in follows]
 
+            return Response({'data':data},status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error":str(e)},status=status.HTTP_400_BAD_REQUEST)
 
 class RejectFollowView(APIView):
     permission_classes = [IsAuthenticated]
-    def post(self,request,follow_request_id):
+    async def post(self,request,follow_request_id):
         try:
-            follow = Followers.objects.get(id = follow_request_id, followed_user =request.user)
+            follow = await Followers.objects.select_related('user').aget(id = follow_request_id, followed_user =request.user)
             if follow.status == 'accepted':
                 return Response("You already accept its followed request, unfollow it for rejection", status=status.HTTP_400_BAD_REQUEST)
             follow.status = 'rejected'
-            follow.save()
+            await follow.asave()
 
             return Response("Follow request rejected",status=status.HTTP_200_OK)
         except Followers.DoesNotExist:
             return Response("request Not found",status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error":str(e)},status=status.HTTP_400_BAD_REQUEST)
 
             
 class UnfollowView(APIView):
     permission_classes = [IsAuthenticated]
-    def delete(self, request, id):
+    async def delete(self, request, follow_record_id):
         try:
-            user =  User.objects.get(id=id)
 
-            follow = Followers.objects.filter(user = request.user, followed_user=user, status = 'accepted')
-            if follow.exists():
-               follow.delete()
-               return Response(f"unFollowed {user.first_name}",status=status.HTTP_200_OK)
+            follow = await Followers.objects.select_related('user').aget(id=follow_record_id, followed_user=request.user, status = 'accepted')
+            if follow:
+               await follow.adelete()
+               return Response(f"unFollowed {follow.user.first_name}",status=status.HTTP_200_OK)
             else:
                 return Response({"error": "You are not following this user or the follow request is not accepted."}, status=status.HTTP_400_BAD_REQUEST)
 
         except User.DoesNotExist:
             return Response("User Not found",status=status.HTTP_404_NOT_FOUND)
-
+        except Exception as e:
+            return Response({"error":str(e)},status=status.HTTP_400_BAD_REQUEST)       
 
 class GetFollowersView(APIView):
-    def get(self,request):
-        user = request.user
-        follower = Followers.objects.filter(followed_user = user)
+    async def get(self,request):
+        try:
+            follower = await sync_to_async(list)(Followers.objects.select_related('user').filter(followed_user = request.user,status='accepted'))
 
-        followed_users = [f.user for f in follower]
-        paginator = PageNumberPagination()
-        paginator.page_size = 15
-        result = paginator.paginate_queryset(followed_users, request)
+            followed_users = [f.user for f in follower]
+            paginator = PageNumberPagination()
+            paginator.page_size = 3
+            result = await sync_to_async(paginator.paginate_queryset)(followed_users, request)
 
-        serializer = UserProfileSerializer(result, many =True)
+            data = await sync_to_async(lambda: UserProfileSerializer(result, many =True).data)()
 
-        return Response(paginator.get_paginated_response(serializer.data).data,status=status.HTTP_200_OK)
+            return Response(paginator.get_paginated_response(data).data,status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error":str(e)},status=status.HTTP_400_BAD_REQUEST) 
 
        
 class FollowingView(APIView):
-    def get(self,request):
-        user = request.user
-        following = Followers.objects.filter(user = user)
+    async def get(self,request):
+        try:
+            following = await sync_to_async(list)(Followers.objects.select_related('followed_user').filter(user = request.user, status='accepted'))
 
-        following_users = [f.followed_user for f in following]
-        
+            following_users = [f.followed_user for f in following]
+            
 
-        paginator = PageNumberPagination()
-        paginator.page_size = 15
-        result =paginator.paginate_queryset(following_users,request)
-        serializer = UserProfileSerializer(result, many = True)
+            paginator = PageNumberPagination()
+            paginator.page_size = 15
+            result = await sync_to_async(paginator.paginate_queryset)(following_users,request)
+            data = await sync_to_async(lambda: UserProfileSerializer(result, many = True).data)()
 
-        return Response(paginator.get_paginated_response(serializer.data).data,status=status.HTTP_200_OK)
+            return Response(paginator.get_paginated_response(data).data,status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error":str(e)},status=status.HTTP_400_BAD_REQUEST) 
 
 
 
 class CreateStory(APIView):
-    def post(self, request):
-        
-        user =request.user
-        request.data['expire_at'] = timezone.now() + timezone.timedelta(hours=24)
-        serializer =  StorySerializer(data = request.data)
-        
-        serializer.is_valid(raise_exception=True)
-        serializer.save(user= user)
-
-        return Response({'Story created ':serializer.data},status=status.HTTP_201_CREATED)
+    async def post(self, request):
+        try:
+            request.data['expire_at'] = timezone.now() + timezone.timedelta(hours=24)
+            serializer =  StorySerializer(data = request.data)
+            
+            await sync_to_async(serializer.is_valid)(raise_exception=True)
+            saved_data = await sync_to_async(serializer.save)(user= request.user)
+            
+            story_data = await Story.objects.select_related('user').prefetch_related('viewers').aget(id=saved_data.id)
+            data = await sync_to_async(lambda: StorySerializer(story_data).data)()
+            return Response({'Story created ':data},status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error":str(e)},status=status.HTTP_400_BAD_REQUEST) 
     
 class GetStory(APIView):
-    def get(self, request):
-        user =request.user
+    async def get(self, request):
+        
         try:
-            story = Story.objects.filter(expire_at__gt = timezone.now(), is_expired =False).exclude(viewers = user)
+            story = Story.objects.select_related('user').prefetch_related('viewers').filter(expire_at__gt = timezone.now(), is_expired =False).exclude(viewers = request.user)
 
-            serializer = StorySerializer(story, many = True)
+            serializer =await  sync_to_async(lambda:StorySerializer(story, many = True).data)()
 
-            return Response({'Stories':serializer.data}, status=status.HTTP_200_OK)
+            return Response({'Stories':serializer}, status=status.HTTP_200_OK)
         except Story.DoesNotExist:
             return Response("Story not found or expired",status=status.HTTP_404_NOT_FOUND)
-    
-
+        except Exception as e:
+            return Response({"error":str(e)},status=status.HTTP_400_BAD_REQUEST) 
+        
 class TrackViewers(APIView):
-    def post(self, request, story_id):
+    async def post(self, request, story_id):
         try:
-            story = Story.objects.get(id =story_id, expire_at__gt=timezone.now())
-            if not story.viewers.filter(id= request.user.id).exists():    
-                story.viewers.add(request.user)
-                story.save()
+            story = await Story.objects.select_related('user').prefetch_related('viewers').aget(id =story_id, expire_at__gt=timezone.now())
+            if not await sync_to_async(story.viewers.filter(id= request.user.id).exists)():    
+                await story.viewers.aadd(request.user)
+                await story.asave()
                 return Response({"Message":"Views Is Tracked"}, status=status.HTTP_200_OK)
 
         except Story.DoesNotExist:
             return Response("Story not found or expired",status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error":str(e)},status=status.HTTP_400_BAD_REQUEST) 
         
 class DeleteStory(APIView):
-    def delete(self, request, story_id):
+    async def delete(self, request, story_id):
         try:
-            story = Story.objects.get(id=story_id, user = request.user)
-            serializer =StorySerializer(story)
-            story.delete()
-            return Response({"message":"Story is deleted","story":serializer.data}, status=status.HTTP_200_OK)
+            story = await Story.objects.aget(id=story_id, user = request.user)
+            serializer =await sync_to_async(lambda: StorySerializer(story).data)()
+            await story.adelete()
+            return Response({"message":"Story is deleted","story":serializer}, status=status.HTTP_200_OK)
         except Story.DoesNotExist:
             return Response("Story not found",status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error":str(e)},status=status.HTTP_400_BAD_REQUEST)
